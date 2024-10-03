@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Invoice</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+      }
+      .invoice-header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .invoice-details {
+        margin-bottom: 20px;
+      }
+      .item-list {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      .item-list th{
+        border: 1px solid #d4d2d2;
+        background-color: antiquewhite;
+        padding: 8px;
+        text-align: center;
+      }
+      .item-list td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      .totals {
+        margin-top: 50px;
+        font-weight: bold;
+        text-align: right;
+      }
+      .totals p.with-line {
+        border-bottom: 1px solid black;
+        padding-bottom: 5px;
+        margin-bottom: 10px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="invoice-header">
+      <h1>Invoice</h1>
+    </div>
+    <div class="invoice-details">
+      <h3>User: <%= userName %> <%= userLastName %></h3>
+    </div>
+    <table class="item-list">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% itemData.forEach((item, index) => { %>
+        <tr>
+          <td><%= item.itemName %></td>
+          <td><%= item.price %></td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+    <div class="totals">
+      <p>Total Price: <%= totalPrice %></p>
+      <p class="with-line">Discount: <%= discount %></p>
+      <p>Final Total Price: <%= finalTotalPrice %></p>
+    </div>
+  </body>
+</html>

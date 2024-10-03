@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <title>Email File</title>
+
+   <!-- CSS link (loading Semantic UI from a CDN) -->
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css" integrity="sha512-8bHTC73gkZ7rZ7vpqUQThUDhqcNFyYi2xgDgPDHc+GXVGHXq+xPjynxIopALmOPqzo9JZj0k6OqqewdGO3EsrQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+   <style>
+     body { padding:50px; }
+   </style>
+</head>
+<body class="container">
+<header>
+   <div class="ui inverted menu">
+       <h1>Account Verification</h1>
+       <p>Dear, </p><h5> <%= fullName %> </h5>
+       <p>Please use below One Time Password to complete process.!</p>
+       <h5> Your OTP : <h5> <h5>  <%= otp %> </h5>
+       <p>Ensure the accurecy of the verification code to complete the activation process Successfully</p>
+       <p>Best Regards.</p>
+   </div>
+</header>
+<script>
+    const user = '<%= fullName %> ';
+    const otpCode = '<%= otp %>';
+</script>
+</body>
+</html>
