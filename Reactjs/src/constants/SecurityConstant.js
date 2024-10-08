@@ -1,0 +1,4 @@
+export const API_ENCRYPTION_KEY = process.env.REACT_APP_API_ENCRYPTION_KEY;
+export const ENCRYPTION_IV_KEY = process.env.REACT_APP_API_ENCRYPTION_IV;
+export const API_DECRYPTION_KEY = process.env.REACT_APP_API_DECRYPTION_KEY;
+export const DECRYPTION_IV_KEY = process.env.REACT_APP_API_DECRYPTION_IV;

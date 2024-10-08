@@ -4,9 +4,10 @@ import * as Yup from 'yup';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../../services/config';
+import PasswordShowHide from '../common/PasswordShowHide';
+import { post } from '../../security/axios';
 
 const ChangePassword = () => {
-  const token = localStorage.getItem('token');
   const navigate = useNavigate();
 
   const validationSchema = Yup.object().shape({
@@ -21,27 +22,24 @@ const ChangePassword = () => {
   });
 
   const handleSubmit = async (values, { setSubmitting, setStatus }) => {
-    try {
-      const response = await axios.post(
-        `${API_URL}/changesPassword`,
-        values,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      console.log("change paswd: ",response);
-      alert("password Change Successfully.")
-      setStatus({ message: response.data.message, error: '' });
-      navigate("/doctorDashboard");
-    } catch (error) {
-      setStatus({
-        message: '',
-        error: error.response?.data?.message || 'Error occurred while changing password',
-      });
-    }
-    setSubmitting(false);
+    return new Promise((resolve, reject) => {
+      post("/changesPassword", values)
+        .then((response) => {
+          resolve(response);
+          alert("Password changed successfully.");
+          setStatus({ message: response.data.message, error: '' });
+          navigate("/doctor/dashboard"); 
+        })
+        .catch((error) => {
+          console.error("Error occurred while changing password", error);
+          setStatus({
+            message: '',
+            error: error.response?.data?.message || 'Error occurred while changing password',
+          });
+          reject(error);
+        });
+      setSubmitting(false);
+    });
   };
 
   return (
@@ -63,11 +61,7 @@ const ChangePassword = () => {
 
               <div className="flex flex-col">
                 <label className="text-gray-600 text-sm">Current Password</label>
-                <Field
-                  type="password"
-                  name="password"
-                  className="bg-gray-100 border border-gray-300 rounded-md px-3 py-2"
-                />
+                <PasswordShowHide name="password" placeholder="Entre current Password" />
                 <ErrorMessage
                   name="password"
                   component="div"
@@ -77,11 +71,7 @@ const ChangePassword = () => {
 
               <div className="flex flex-col">
                 <label className="text-gray-600 text-sm">New Password</label>
-                <Field
-                  type="password"
-                  name="newPassword"
-                  className="bg-gray-100 border border-gray-300 rounded-md px-3 py-2"
-                />
+                <PasswordShowHide name="newPassword" placeholder="Entre New password" />
                 <ErrorMessage
                   name="newPassword"
                   component="div"
@@ -95,6 +85,7 @@ const ChangePassword = () => {
                   type="password"
                   name="confirmPassword"
                   className="bg-gray-100 border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="Entre confirm Password"
                 />
                 <ErrorMessage
                   name="confirmPassword"

@@ -47,6 +47,9 @@ const patientSchema = new Schema({
     },
     otp: {
         type: Number
+    },
+    age:{
+        type:Number
     }
 }, {
     timestamps: true

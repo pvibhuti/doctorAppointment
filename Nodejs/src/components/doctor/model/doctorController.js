@@ -444,6 +444,10 @@ exports.changesPassword = async (req, res, next) => {
             return sendError(req, res, { message: "Incorrect password" });
         }
 
+        if (password === newPassword ) {
+            return sendError(req, res, { message: "New Password must be different from current." });
+        }
+
         if (newPassword !== confirmPassword) {
             return sendError(req, res, {
                 message: "New Password and Confirm Password do not match",

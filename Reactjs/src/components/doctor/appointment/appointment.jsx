@@ -1,56 +1,48 @@
-
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import decryptionProcess from "../../common/decrypt.jsx";
 import { Link } from 'react-router-dom';
 import { IoHome } from "react-icons/io5";
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { API_URL } from '../../../services/config.js';
+import { get, post } from '../../../security/axios.js';
+import { toastMessage } from '../../helpers/Toast.jsx';
 
 const Appointments = () => {
     const [appointments, setAppointments] = useState([]);
     const [filter, setFilter] = useState({ day: 'today', time: '', status: '', search: '' });
-    const token = localStorage.getItem('token');
-
-    const api = axios.create({
-        baseURL: `${API_URL}`,
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
-
-    const fetchAppointments = async () => {
-        try {
-            const response = await api.get('/getAppointment', { params: filter });
-            const decryption = await decryptionProcess(response);
-            if (!decryption.allAppointments.length) {
-                toast.warn("No appointments found.");
-            }
-            setAppointments(decryption.allAppointments || []);
-        } catch (error) {
-            console.error('Error fetching appointments:', error);
-            toast.error(Object.values(error.response.data).toString());
-            // toast.error(" Filter appointments Not found.");
-        }
-    };
 
     useEffect(() => {
         fetchAppointments();
     }, [filter]);
 
+    const fetchAppointments = async () => {
+        return new Promise((resolve, reject) => {
+            get(`/getAppointment`, { params: filter })
+                .then((response) => {
+                    setAppointments(response.data.allAppointments || []);
+                    resolve(response);
+                })
+                .catch((error) => {
+                    console.error('Error fetching appointments:', error);
+                    toastMessage('error', Object.values(error.response.data).toString());
+                });
+        });
+    };
+
     const handleAppointmentAction = async (action, appointmentId) => {
-        try {
-            const endpoint = action === 'Approve' ? `/approveAppointment?id=${appointmentId}` : `/rejectAppointment?id=${appointmentId}`;
-            const response = await api.post(endpoint);
-            await decryptionProcess(response);
-            toast.success(`Appointment ${action === 'Approve' ? 'Approved' : 'Rejected'} Successfully.`);
-            fetchAppointments();
-        } catch (error) {
-            console.error('Error:', error);
-            // toast.error(`Failed to ${action === 'Approve' ? 'approve' : 'reject'} appointment.`);
-            toast.error(Object.values(error.response.data).toString());
-        }
+        const url = action === 1
+            ? `/approveAppointment?id=${appointmentId}`
+            : `/rejectAppointment?id=${appointmentId}`;
+        return new Promise((resolve, reject) => {
+            post(url)
+                .then((response) => {
+                    alert(`Appointment ${action === 1 ? 'Approved' : 'Rejected'} Successfully.`);
+                    resolve(response);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    toastMessage('error', Object.values(error.response.data).toString());
+                })
+        });
     };
 
     return (
@@ -77,7 +69,7 @@ const Appointments = () => {
                 <div>
                     <label className="block text-sm font-medium">Filter by Time</label>
                     <input
-                        type="text"
+                        type="time"
                         className="block w-full mt-1 border-gray-300 rounded-md shadow-sm"
                         value={filter.time}
                         onChange={(e) => setFilter({ ...filter, time: e.target.value })}
@@ -96,8 +88,8 @@ const Appointments = () => {
                         <option value="rejected">Rejected</option>
                     </select>
                 </div>
-                
-                <Link to="/doctorDashboard">
+
+                <Link to="/doctor/dashboard">
                     <button className="flex items-center space-x-2 px-5 py-3 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">
                         <IoHome className="w-3 h-3" />
                         <span>Back to Dashboard</span>
@@ -131,13 +123,13 @@ const Appointments = () => {
                                     {appointment.status === 0 ? (
                                         <>
                                             <button
-                                                onClick={() => handleAppointmentAction('Approve', appointment._id)}
+                                                onClick={() => handleAppointmentAction(1, appointment._id)}
                                                 className="bg-green-500 text-white px-2 py-1 rounded"
                                             >
                                                 Approve
                                             </button>
                                             <button
-                                                onClick={() => handleAppointmentAction('Reject', appointment._id)}
+                                                onClick={() => handleAppointmentAction(2, appointment._id)}
                                                 className="bg-red-500 text-white px-2 py-1 rounded ml-2"
                                             >
                                                 Reject

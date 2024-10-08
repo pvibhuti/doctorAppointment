@@ -1,62 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-import decryptionProcess from '../../components/common/decrypt.jsx';
 import moment from 'moment';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { API_URL } from '../../services/config.js';
+import { get } from '../../security/axios.js';
 
 const PatientDashboard = () => {
-    const [profile, setProfile] = useState({});
     const [patient, setPatient] = useState({});
     const [appointments, setAppointments] = useState([]);
     const navigate = useNavigate();
 
-    const token = localStorage.getItem('token');
-
-    const api = axios.create({
-        baseURL: `${API_URL}`,
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
-
-    const fetchProfile = async () => {
-        try {
-            const response = await api.get('/getPatientData');
-            const decryption = await decryptionProcess(response);
-            setProfile(decryption.existingPatient);
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    };
+    useEffect(() => {
+        fetchPatientInfo();
+        fetchAppointments();
+    }, []);
 
     const fetchPatientInfo = async () => {
-        try {
-            const response = await api.get('/getPatientData');
-            const decryption = await decryptionProcess(response);
-            setPatient(decryption.existingPatient);
-        } catch (error) {
-            console.error('Error:', error);
-        }
+        return new Promise((resolve, reject) => {
+            get(`/getPatientData`)
+                .then((response) => {
+                    setPatient(response.data.existingPatient);
+                    resolve(response);
+                })
+                .catch((error) => {
+                    console.error('get Patient Data error:', error);
+                    // reject(error);
+                });
+        });
     };
 
     const fetchAppointments = async () => {
-        try {
-            const response = await api.get('/getPatientAppointment');
-            const decryption = await decryptionProcess(response);
-            setAppointments(decryption.patientAppointment || []);
-        } catch (error) {
-            console.error('Error:', error);
-        }
+        return new Promise((resolve, reject) => {
+            get(`/getPatientAppointment`)
+                .then((response) => {
+                    setAppointments(response.data.patientAppointment || []);
+                    resolve(response);
+                })
+                .catch((error) => {
+                    console.error('getDoctor Data error:', error);
+                    // reject(error);
+                });
+        });
     };
-
-    useEffect(() => {
-        fetchProfile();
-        fetchPatientInfo();
-        fetchAppointments();
-    },[]);
 
     const logout = () => {
         localStorage.removeItem('token');
@@ -78,10 +64,10 @@ const PatientDashboard = () => {
                     </div>
                 </div>
                 <nav className="mt-10">
-                    <Link to="/patientProfile" className="block py-2 px-4 hover:bg-gray-700">My Profile</Link>
-                    <Link to="/bookAppointment" className="block py-2 px-4 hover:bg-gray-700">Book Appointments</Link>
-                    <Link to="/appointmentlists" className="block py-2 px-4 hover:bg-gray-700">Appointments Lists</Link>
-                    <Link to="/changePatientPassword" className="block py-2 px-4 hover:bg-gray-700">Change Password</Link>
+                    <Link to="/patient/myProfile" className="block py-2 px-4 hover:bg-gray-700">My Profile</Link>
+                    <Link to="/patient/bookAppointment" className="block py-2 px-4 hover:bg-gray-700">Book Appointments</Link>
+                    <Link to="/patient/appointments" className="block py-2 px-4 hover:bg-gray-700">Appointments Lists</Link>
+                    <Link to="/patient/changePassword" className="block py-2 px-4 hover:bg-gray-700">Change Password</Link>
                     <span
                         className="block py-2 px-4 hover:bg-gray-700 cursor-pointer"
                         onClick={logout}
@@ -151,7 +137,7 @@ const PatientDashboard = () => {
                                 <label className="text-gray-600 text-sm">Full Name</label>
                                 <input
                                     type="text"
-                                    value={profile.fullName || ''}
+                                    value={patient.fullName || ''}
                                     readOnly
                                     className="bg-gray-100 border border-gray-300 rounded-md px-2 py-1"
                                 />
@@ -161,7 +147,7 @@ const PatientDashboard = () => {
                                 <label className="text-gray-600 text-sm">Email</label>
                                 <input
                                     type="email"
-                                    value={profile.email || ''}
+                                    value={patient.email || ''}
                                     readOnly
                                     className="bg-gray-100 border border-gray-300 rounded-md px-2 py-1"
                                 />
@@ -171,7 +157,7 @@ const PatientDashboard = () => {
                                 <label className="text-gray-600 text-sm">Contact Number</label>
                                 <input
                                     type="text"
-                                    value={profile.phone || ''}
+                                    value={patient.phone || ''}
                                     readOnly
                                     className="bg-gray-100 border border-gray-300 rounded-md px-2 py-1"
                                 />
@@ -181,7 +167,7 @@ const PatientDashboard = () => {
                                 <label className="text-gray-600 text-sm">Address</label>
                                 <input
                                     type="text"
-                                    value={profile.address || ''}
+                                    value={patient.address || ''}
                                     readOnly
                                     className="bg-gray-100 border border-gray-300 rounded-md px-2 py-1"
                                 />

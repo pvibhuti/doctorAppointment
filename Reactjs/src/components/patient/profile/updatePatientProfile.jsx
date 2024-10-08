@@ -1,38 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup'; // Import Yup for validation
-import axios from 'axios';
-import decryptionProcess from "../common/decrypt.jsx";
+import * as Yup from 'yup'; 
 import { ToastContainer } from 'react-toastify';
 import { Link } from 'react-router-dom';
-import { API_URL } from '../../services/config.js';
+import { get, patch } from '../../../security/axios.js';
+import { toastMessage } from '../../helpers/Toast.jsx';
 
 const UpdatePatientProfile = () => {
   const [profile, setProfile] = useState({});
-
-  const token = localStorage.getItem('token');
-
-  const api = axios.create({
-    baseURL: `${API_URL}`,
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  const fetchProfile = async () => {
-    try {
-      const response = await api.get('/getPatientData');
-      const decryption = await decryptionProcess(response);
-      console.log("Decryption Patient Response", decryption);
-      setProfile(decryption.existingPatient);
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchProfile();
-  });
 
   const validationSchema = Yup.object({
     fullName: Yup.string()
@@ -56,13 +31,37 @@ const UpdatePatientProfile = () => {
       .required('age is required'),
   });
 
+  useEffect(() => {
+    fetchProfile();
+  });
+
+  const fetchProfile = async () => {
+    return new Promise((resolve, reject) => {
+      get("/getPatientData")
+        .then((response) => {
+          setProfile(response.data.existingPatient);
+          resolve(response);
+        })
+        .catch((error) => {
+          console.error('Error fatching patient:', error);
+          reject(error)
+        })
+    })
+  };
+
   const handleSubmit = async (values) => {
-    try {
-      await api.patch('/editPatient', values);
-      alert('Profile updated successfully!');
-    } catch (error) {
-      console.error('Error:', error);
-    }
+    return new Promise((resolve, reject) => {
+      patch("/editPatient", values)
+        .then((response) => {
+          alert('Profile updated successfully!');
+          resolve(response);
+        })
+        .catch((error) => {
+          console.error('Error update detsils:', error);
+          toastMessage('error', error.response.data.message || "Error update details.");
+          reject(error)
+        })
+    })
   };
 
   return (
@@ -156,7 +155,7 @@ const UpdatePatientProfile = () => {
             </button>
           </div>
           <div>
-            <Link to="/patientProfile">
+            <Link to="/patient/dashboard">
               <button
                 type="button"
                 className="w-full bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600"

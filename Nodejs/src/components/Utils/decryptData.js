@@ -12,13 +12,13 @@ const API_KEY_DEC = crypto
     .update(KEY_DEC)
     .digest('hex')
     .substring(0, 32)
-    
+
 const API_DECRYPT_IV_KEY = crypto
     .createHash('sha512')
     .update(DECRYPT_IV_KEY)
     .digest('hex')
-    .substring(0, 16)
-    
+    .substring(0, 16);
+
 //Decrypt Data
 async function decryptedDataResponse(mac, value) {
     const buff = Buffer.from(value, 'base64')
@@ -26,7 +26,7 @@ async function decryptedDataResponse(mac, value) {
     let decrypted = decipher.update(buff.toString('hex'), 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     // console.log("bff:", decrypted);
-    return JSON.parse(decrypted);  
+    return JSON.parse(decrypted);
 }
 
-module.exports = {decryptedDataResponse};
+module.exports = { decryptedDataResponse };

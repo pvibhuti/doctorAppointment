@@ -1,41 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import { FaEdit } from 'react-icons/fa';
-import decryptionProcess from '../common/decrypt.jsx';
 import { IoHome } from "react-icons/io5";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { API_URL } from '../../services/config.js';
+import { API_URL } from '../../../services/config.js';
+import { get, post } from '../../../security/axios.js';
+import { toastMessage } from '../../helpers/Toast.jsx';
 
 const PatientProfile = () => {
   const [profile, setProfile] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const token = localStorage.getItem('token');
-
-  const api = axios.create({
-    baseURL: `${API_URL}`,
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  const fetchProfile = async () => {
-    try {
-      const response = await api.get('/getPatientData');
-      const decryption = await decryptionProcess(response);
-      console.log('Decryption Patient Response', decryption);
-      setProfile(decryption.existingPatient);
-    } catch (error) {
-      console.error('Error fetching User info:', error);
-    }
-  };
-
   useEffect(() => {
     fetchProfile();
   });
+
+  const fetchProfile = async () => {
+    return new Promise((resolve, reject) => {
+      get("/getPatientData")
+        .then((response) => {
+          setProfile(response.data.existingPatient);
+          resolve(response);
+        })
+        .catch((error) => {
+          console.error('Error fetching User info:', error);
+          // reject(error)
+        })
+    })
+  };
 
   const handleFileChange = (event) => {
     setSelectedFile(event.target.files[0]);
@@ -51,21 +45,20 @@ const PatientProfile = () => {
     const formData = new FormData();
     formData.append('file', selectedFile);
 
-    try {
-      const response = await api.post('/updateProfilePic', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      console.log('Profile photo upload response:', response.data);
-      const decryption = await decryptionProcess(response);
-      console.log('Decryption Patient Profile', decryption);
-      alert("Upload Successfully.", decryption.filePaths);
-      setIsEditing(false);
-      fetchProfile();
-    } catch (error) {
-      console.error('Error uploading profile photo:', error);
-    }
+    return new Promise((resolve, reject) => {
+      post("/updateProfilePic", formData)
+        .then((response) => {
+          alert("Profile photo upload Successfully.")
+          setIsEditing(false);
+          fetchProfile();
+          resolve(response);
+        })
+        .catch((error) => {
+          console.error('Error uploading photo:', error);
+          toastMessage('error', error.response.data.message || "Error uploading photo.");
+          // reject(error)
+        })
+    })
   };
 
 
@@ -74,7 +67,7 @@ const PatientProfile = () => {
       <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-bold text-gray-700">Profile</h1>
-          <Link to="/updatePatientProfile">
+          <Link to="/patient/updateProfile">
             <FaEdit className="text-gray-500 hover:text-gray-800" size={20} />
           </Link>
         </div>
@@ -187,7 +180,7 @@ const PatientProfile = () => {
             />
           </div>
 
-          <Link to="/patientDashboard"> <button className="flex items-center space-x-2 px-2 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+          <Link to="/patient/dashboard"> <button className="flex items-center space-x-2 px-2 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">
             <IoHome className="w-3 h-3" />
             <span>Back to Dashboard</span>
           </button></Link>

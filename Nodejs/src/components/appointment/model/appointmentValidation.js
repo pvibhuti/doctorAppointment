@@ -6,17 +6,14 @@ async function validateAppointmentInput(req, res, next) {
 
   let rules = {
     doctorId: ["required"],
-    // patientId: ["required"],
     appointmentDate: ["required", "date","regex:/^[0-9]{4}-[0-9]{2}-[0-9]{2}$"],
     appointmentTime: ["required"],
-    disease:["required","min:5","max:15","regex:/^[A-Za-z ]+$/"]
+    disease:["required","min:5","max:35","regex:/^[A-Za-z ]+$/"]
   };
-
-  // console.log("Rules:", rules);
 
   await validator(req.body, rules, async (errors, status) => {
     if (!status) {
-      // console.log("Error :", errors);
+      console.log("Error :", errors);
       return commonfun.sendError(req, res, errors)
       return "ERROR";
     } else {

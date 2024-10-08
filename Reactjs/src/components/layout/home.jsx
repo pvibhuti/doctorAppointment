@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import "../../../assets/css/home.css"
+import "../../assets/css/home.css"
 
 function Home() {
     return (
@@ -74,7 +74,7 @@ function Home() {
                 </div>
                 <div className="flex flex-wrap items-center justify-between py-6">
                     <div className="w-1/2 md:w-auto">
-                        <a href="index.html" className="text-white font-bold text-2xl">
+                        <a href="/" className="text-white font-bold text-2xl">
                             Doctor Appointment
                         </a>
                     </div>
@@ -117,7 +117,7 @@ function Home() {
                 <section className="cover bg-blue-teal-gradient relative bg-blue-600 px-4 sm:px-8 lg:px-16 xl:px-40 2xl:px-64 overflow-hidden py-48 flex
       items-center min-h-screen">
                     <div className="h-full absolute top-0 left-0 z-0">
-                        <img src="images" alt="" className="w-full h-full object-cover opacity-20" />
+                        {/* <img src="images" alt="" className="w-full h-full object-cover opacity-20" /> */}
                     </div>
 
                     <div className="lg:w-3/4 xl:w-2/4 relative z-10 h-100 lg:mt-16">

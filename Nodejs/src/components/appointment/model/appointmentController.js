@@ -37,7 +37,7 @@ exports.bookAppointment = async (req, res, next) => {
 
         const appointmentTimeMoment = moment(appointmentTime, 'HH:mm');
 
-        if ((appointmentTime > doctorData.shiftStartTime) && (appointmentTime > doctorData.shiftEndTime)) {
+        if ((appointmentTime < doctorData.shiftStartTime) || (appointmentTime > doctorData.shiftEndTime)) {
             return sendError(req, res, {
                 message: "The appointment time must be within the doctor's shift timings."
             });
@@ -296,6 +296,37 @@ exports.tomorrowsAppointment = async (req, res, next) => {
     }
 };
 
+exports.allcountAppointment =async(req, res, next) => {
+    try {
+        const decoded = await verifyToken(req, res);
+        if (!decoded) {
+            return sendError(req, res, { message: "Invalid token." }, 403);
+        }
+
+        const totalAppointments = await appointment.countDocuments({ doctorId: decoded.doctorId });
+
+        const today = moment().format("YYYY-MM-DD");
+        const todayAppointments = await appointment.countDocuments({ doctorId: decoded.doctorId, appointmentDate: today });
+
+        const tomorrow = moment().add(1, 'days').format("YYYY-MM-DD");
+        const tomorrowAppointments = await appointment.countDocuments({ doctorId: decoded.doctorId, appointmentDate: tomorrow });
+
+        return sendSuccess(req, res, {
+            message: "Total appointments fetched successfully.",
+            totalAppointments,
+            todayAppointments,
+            tomorrowAppointments
+        });
+
+    } catch (error) {
+        console.error('Error fetching All Count appointments:', error);
+        return sendError(req, res, {
+            message: "Error fetching total appointments.",
+            error: error.message
+        }, 500);
+    }
+}
+
 exports.upcomingAppointment = async (req, res, next) => {
     try {
         const decoded = await verifyToken(req, res);
@@ -303,7 +334,8 @@ exports.upcomingAppointment = async (req, res, next) => {
             return sendError(req, res, { message: "Invalid token." }, 403);
         }
 
-        const today = moment().startOf('day').toDate();
+        const today = moment().startOf('day').format('YYYY-MM-DD')
+        
         const upcomingAppointments = await appointment.find({
             doctorId: decoded.doctorId,
             appointmentDate: { $gt: today }

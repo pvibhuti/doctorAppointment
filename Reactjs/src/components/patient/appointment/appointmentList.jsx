@@ -1,61 +1,65 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import decryptionProcess from '../../common/decrypt';
 import moment from 'moment';
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { API_URL } from '../../../services/config';
+import AxiosMiddleware, { get } from '../../../security/axios';
+import { toastMessage } from '../../helpers/Toast';
 
 const AppointmentLists = () => {
     const [profile, setProfile] = useState({});
     const [appointments, setAppointments] = useState([]);
     const navigate = useNavigate();
 
-    const token = localStorage.getItem('token');  
-
-    const api = axios.create({
-        baseURL: `${API_URL}`,
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
-
-    const fetchProfile = async () => {
-        try {
-            const response = await api.get('/getPatientData');
-            const decryption = await decryptionProcess(response);
-            setProfile(decryption.existingPatient);
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    };
-
-    const fetchAppointments = async () => {
-        try {
-            const response = await api.get('/getPatientAppointment');
-            const decryption = await decryptionProcess(response);
-            setAppointments(decryption.patientAppointment || []);
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    };
-
-    const deleteAppointment = async (id) => {
-        try {
-            await api.delete(`/deleteAppointment?id=${id}`);
-            toast.success('Appointment Deleted Successfully');
-            fetchAppointments();
-        } catch (error) {
-            toast.error('Error Deleting Appointment');
-            console.error('Error:', error);
-        }
-    };
-
     useEffect(() => {
         fetchProfile();
         fetchAppointments();
     }, []);
+
+    const fetchProfile = async () => {
+        return new Promise((resolve, reject) => {
+            get("/getPatientData")
+                .then((response) => {
+                    setProfile(response.data.existingPatient);
+                    resolve(response);
+                })
+                .catch((error) => {
+                    console.error('Error fetching data :', error);
+                    reject(error)
+                })
+        })
+    };
+
+    const fetchAppointments = async () => {
+        return new Promise((resolve, reject) => {
+            get("/getPatientAppointment")
+                .then((response) => {
+                    setAppointments(response.data.patientAppointment || []);
+                    resolve(response);
+                })
+                .catch((error) => {
+                    console.error('Error fetching data:', error);
+                    reject(error)
+                })
+        })
+    };
+
+    const deleteAppointment = async (id) => {
+        return new Promise((resolve, reject) => {
+            AxiosMiddleware('delete', `${API_URL}/deleteAppointment?id=${id}`)
+                .then((response) => {
+                    toastMessage('success', 'Appointment Deleted Successfully');
+                    fetchAppointments();
+                    resolve(response);
+                })
+                .catch((error) => {
+                    console.error('Error Deleting Appointment:', error);
+                    toastMessage('error', 'Error Deleting Appointment');
+                    reject(error)
+                })
+        })
+    };
 
     const logout = () => {
         localStorage.removeItem('token');
@@ -63,7 +67,7 @@ const AppointmentLists = () => {
     };
 
     const backtoHome = () => {
-        navigate("/patientDashboard");
+        navigate("/patient/dashboard");
     };
 
     return (

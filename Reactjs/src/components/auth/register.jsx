@@ -2,11 +2,13 @@ import React from 'react';
 import { Formik, Field, Form, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import "../../assets/css/register.css";
-import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../../services/config';
+import PasswordShowHide from '../common/PasswordShowHide';
+import AuthService from '../../services/AuthServices';
+import { toastMessage } from '../helpers/Toast';
 
 const RegisterForm = () => {
     const [userType, setUserType] = React.useState('patient');
@@ -21,22 +23,29 @@ const RegisterForm = () => {
         gender: Yup.string().required('Gender is required'),
     });
 
-    const handleSubmit = async (values) => {
+    const handleSubmit = async (values, { resetForm }) => {
         console.log('Form data', values);
-        const url = userType === "patient" ? `${API_URL}/registerPatient` : `${API_URL}/registerDoctor`;
-
-        try {
-            await axios.post(url, values);
-            alert('Registration Successful');
-            navigate("/login");
-        } catch (error) {
-            console.error('Error:', error);
-            if (error.response && error.response.data) {
-                toast.error(Object.values(error.response.data).toString());
-            } else {
-                toast.error('An unexpected error occurred. Please try again.');
-            }
-        }
+        debugger;
+    
+        const url = userType === "patient" 
+            ? `${API_URL}/registerPatient` 
+            : `${API_URL}/registerDoctor`;
+    
+        const registrationData = {
+            ...values,
+            userType,
+        };
+    
+        AuthService.registration(registrationData, url) 
+            .then((response) => {
+                console.log('Registration successful:', response);
+                alert("Registration Successfully.")
+                navigate("/login");
+                resetForm();
+            })
+            .catch((error) => {
+                console.error('Registration error:', error);
+            });
     };
 
     return (
@@ -91,7 +100,8 @@ const RegisterForm = () => {
                             {/* Password */}
                             <div className="mb-4">
                                 <label htmlFor="password" className="block text-gray-700 font-medium mb-1">Password</label>
-                                <Field name="password" type="password" className="w-full p-2 border border-gray-300 rounded-md" placeholder="Enter your password" />
+                                {/* <Field name="password" type="password" className="w-full p-2 border border-gray-300 rounded-md" placeholder="Enter your password" /> */}
+                                <PasswordShowHide name="password" placeholder="Entre your password"/>
                                 <ErrorMessage name="password" component="div" className="text-red-500 text-sm mt-1" />
                             </div>
 

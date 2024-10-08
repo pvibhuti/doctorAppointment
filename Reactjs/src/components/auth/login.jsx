@@ -1,14 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Formik, Field, Form, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import "../../assets/css/login.css";
-import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import DecryptionProcess from './decrypt';
 import { API_URL } from '../../services/config';
+import PasswordShowHide from '../common/PasswordShowHide';
+import AuthService from '../../services/AuthServices';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -16,65 +15,37 @@ const Login = () => {
 
     const validationSchema = Yup.object({
         email: Yup.string().email('Invalid email format').required('Email is required'),
-        password: Yup.string().required('Password is required')
+        password: Yup.string().required('Password is required').min(8, "Minimum 8 characters").max(15, "Maximum 15 characters")
     });
 
-    console.log("API ", `${API_URL}`);
     const handleSubmit = async (values) => {
-        console.log('Form data', values);
-        if (userType === 'patient') {
-            try {
-                const response = await axios.post(`${API_URL}/loginPatient`, values);
-                console.log("Login Patient", response.data);
+        debugger;
 
-                const decrypt = await DecryptionProcess(response);
-                console.log("decrypt for Patient Login ", decrypt);
+        const url = userType === 'patient'
+            ? `${API_URL}/loginPatient`
+            : `${API_URL}/loginDoctor`;
 
-                if (decrypt) {
-                    localStorage.setItem("token", decrypt.token);
-                    alert('Login Successfully.');
-                    navigate("/patientDashboard");
-                } else {
-                    console.error('Unexpected data format after decryption:', decrypt);
-                    alert('Login Failed.');
-                    navigate("/login");
-                }
+        const nevigate = userType === 'patient'
+            ? `/patient/dashboard`
+            : `/doctor/dashboard`;
 
-            } catch (error) {
-                console.error('Error:', error);
-                if (error.response && error.response.data) {
-                    toast.error(error.response.data.message || 'Something went wrong');
-                } else {
-                    toast.error('Network error. Please try again.');
-                }
-            }
-        } else {
-            try {
-                const response = await axios.post(`${API_URL}/loginDoctor`, values);
-                console.log("Login Doctor", response.data);
-
-                const decrypt = await DecryptionProcess(response);
-                console.log("decrypt for Doctor Login ", decrypt);
-
-                if (decrypt) {
-                    localStorage.setItem("token", decrypt.token);
-                    alert('Login Successfully.');
-                    navigate("/doctorDashboard");
-                } else {
-                    console.error('Unexpected data format after decryption:', decrypt);
-                    alert('Login Failed.');
-                    navigate("/login");
-                }
-
-            } catch (error) {
-                console.error('Error:', error);
-                if (error.response && error.response.data) {
-                    toast.error(error.response.data.message || 'Something went wrong');
-                } else {
-                    toast.error('Network error. Please try again.');
-                }
-            }
+        const loginData = {
+            ...values,
+            userType,
         }
+
+        AuthService.login(loginData, url, navigate)
+            .then((response) => {
+                alert('Login Successfully!');
+                navigate(userType === 'patient' ? '/patient/dashboard' : '/doctor/dashboard');
+            })
+            .catch((error) => {
+                console.error('Login error:', error);
+            });
+    }
+
+    const handleForgetPassword = () => {
+        navigate(userType === 'doctor' ? '/doctor/forgotPassword' : '/patient/forgotPassword');
     };
 
     return (
@@ -112,14 +83,10 @@ const Login = () => {
                                 <ErrorMessage name="email" component="div" className="text-red-500 text-sm mt-1" />
                             </div>
 
-                            {/* Password */}
+                            {/* Password with Show/Hide functionality */}
                             <div className="mb-4">
-                                <label type={
-                                    values.password
-                                        ? "text"
-                                        : "password"
-                                } htmlFor="password" className="block text-gray-700 font-medium mb-1">Password</label>
-                                <Field name="password" type="password" className="w-full p-2 border border-gray-300 rounded-md" placeholder="Enter your password" />
+                                <label htmlFor="password" className="block text-gray-700 font-medium mb-1">Password</label>
+                                <PasswordShowHide name="password" placeholder="Entre your password" />
                                 <ErrorMessage name="password" component="div" className="text-red-500 text-sm mt-1" />
                             </div>
 
@@ -140,7 +107,7 @@ const Login = () => {
                             {/* Conditional Forget Password Link */}
                             <div className="mt-6 text-center">
                                 <Link
-                                    to={userType === 'doctor' ? "/forgetPassword" : "/forgotPatientPassword"}
+                                    to={userType === 'doctor' ? "/doctor/forgotPassword" : "/patient/forgotPassword"}
                                     className="text-blue-600 hover:text-blue-800 font-medium"
                                 >
                                     Forget Password

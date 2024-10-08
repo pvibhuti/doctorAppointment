@@ -177,7 +177,7 @@ exports.updateProfilePic = async (req, res, next) => {
 
         const patientId = decoded.patientId;
 
-        const existingUser = await patient.findOne({ _id:patientId });
+        const existingUser = await patient.findOne({ _id: patientId });
         if (!existingUser) {
             return sendError(req, res, { message: "User not found" }, 404);
         }
@@ -257,6 +257,10 @@ exports.changePatientPassword = async (req, res, next) => {
             return sendError(req, res, { message: "Incorrect password" });
         }
 
+        if (password === newPassword) {
+            return sendError(req, res, { message: "New Password must be different from current." });
+        }
+
         if (newPassword !== confirmPassword) {
             return sendError(req, res, {
                 message: "New Password and Confirm Password do not match",
@@ -289,7 +293,10 @@ exports.sendOTP = async (req, res, next) => {
         const { email } = req.body;
         const formattedEmail = email.toLowerCase();
 
-        const userData = await patient.findOne({ email: formattedEmail});
+        const userData = await patient.findOne({ email: formattedEmail });
+        if (!userData) {
+            return sendError(req, res, { message: "User not Found." },404);
+        }
 
         if (userData.email !== formattedEmail) {
             return sendError(req, res, { message: "Wrong Email Id." });
@@ -330,10 +337,10 @@ exports.forgotPatientPassword = async (req, res, next) => {
 
         // const patientId = decoded.patientId;
 
-        const { email , otp, newPassword, confirmPassword } = req.body;
+        const { email, otp, newPassword, confirmPassword } = req.body;
         const formattedEmail = email.toLowerCase();
         const userData = await patient.findOne({ email: formattedEmail });
-        
+
         if (!userData) {
             return sendError(req, res, { message: "User Not Found" });
         }

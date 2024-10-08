@@ -5,9 +5,9 @@ const url = config.get('MONGO_URL');
 const mongoose = require('mongoose');
 const express = require("express");
 const path = require('path');
-const multer = require('multer');
-const upload = multer({ dest: 'uploads/' })
-// const { upload } = require("./components/Utils/CommonUtils.js");
+// const multer = require('multer');
+// const upload = multer({ dest: 'uploads/' })
+const { upload } = require("./components/Utils/CommonUtils.js");
 
 const app = express();
 app.use(express.json());
@@ -15,9 +15,8 @@ app.use(express.json());
 app.use("/uploads",express.static(path.join(__dirname,'..','uploads')));
 
 const cors = require('cors');
-
-app.use(cors());
-app.use(cors({ origin: 'http://localhost:3000' }));
+ 
+app.use(cors({ origin: '*' }));
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -39,7 +38,7 @@ const adminValidation = require("./components/admin/model/adminValidation.js");
 const doctorValidation = require("./components/doctor/model/doctorValidation.js");
 const patientValidation = require("./components/patient/model/patientValidation.js");
 const appointmentValidation = require("./components/appointment/model/appointmentValidation.js");
-
+        
 //admin
 app.post("/registerAdmin", adminValidation.validateadminInput ,adminController.register);
 app.post("/loginAdmin", adminController.loginAdmin);
@@ -80,6 +79,7 @@ app.post("/approveAppointment", appointmentController.approveAppointment);
 app.post("/rejectAppointment", appointmentController.rejectAppointment);
 app.patch("/editAppointment", appointmentController.editAppointment);
 app.delete("/deleteAppointment", appointmentController.deleteAppointment)
+app.get("/allcountAppointment", appointmentController.allcountAppointment);
 
 //Decrypt
 app.post("/decryptionProcess", doctorController.decryptionProcess);

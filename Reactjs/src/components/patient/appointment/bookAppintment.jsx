@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import axios from 'axios';
 import moment from 'moment';
 import { useNavigate } from 'react-router-dom';
-import decryptionProcess from '../../common/decrypt';
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { API_URL } from '../../../services/config';
+import { get, post } from '../../../security/axios';
+import { toastMessage } from '../../helpers/Toast';
 
 const validationSchema = Yup.object({
     doctorId: Yup.string().required('Please select a doctor'),
@@ -22,60 +21,51 @@ const validationSchema = Yup.object({
 const BookAppointment = () => {
     const [doctors, setDoctors] = useState([]);
     const navigate = useNavigate();
-    const token = localStorage.getItem('token');
-
-    const api = axios.create({
-        baseURL: `${API_URL}`,
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
 
     useEffect(() => {
-        const fetchDoctors = async () => {
-            try {
-                const response = await axios.get(`${API_URL}/getDoctors`);
-                const decryption = await decryptionProcess(response);
-                console.log('Decryption Response', decryption);
-                setDoctors(decryption.existingDoctor);
-            } catch (error) {
-                console.error('Error fetching doctors:', error);
-            }
-        };
-
         fetchDoctors();
     }, []);
 
-    const handleSubmit = async (values, { setSubmitting, resetForm }) => {
-        try {
-            // const formattedTime = moment(values.appointmentTime, 'HH:mm');
-            // console.log("Formated time ", formattedTime);
-            
-            // const updatedValues = {
-            //     ...values
-            // };
+    const fetchDoctors = async () => {
+        return new Promise((resolve, reject) => {
+            get("/getDoctors")
+                .then((response) => {
+                    setDoctors(response.data.existingDoctor);
+                    resolve(response);
+                })
+                .catch((error) => {
+                    console.error('Error fetching doctors:', error);
+                    reject(error)
+                })
+        })
+    };
 
-            const response = await api.post('/bookAppointment', values);
-            const decryption = await decryptionProcess(response);
-            console.log('newAppointment Response', decryption.newAppointment);
-            alert("Appointment Booked Successfully.")
-            resetForm();
-            navigate('/patientDashboard');
-        } catch (error) {
-            console.error('Error:', error);
-            if (error.response && error.response.data) {
-                const errorMessage = error.response.data.message;
-                if (errorMessage.includes('already scheduled') || errorMessage.includes('within 30 minutes')) {
-                    toast.error(errorMessage);
-                } else {
-                    toast.error(Object.values(error.response.data).toString());
-                }
-            } else {
-                toast.error(Object.values(error.response.data).toString());
-            }
-        } finally {
-            setSubmitting(false);
-        }
+    const handleSubmit = async (values, { setSubmitting, resetForm }) => {
+        return new Promise((resolve, reject) => {
+            post("/bookAppointment", values)
+                .then((response) => {
+                    alert("Appointment Booked Successfully.")
+                    resetForm();
+                    navigate('/patient/dashboard');
+                    resolve(response);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    if (error.response && error.response.data.message) {
+                        const errorMessage = error.response.data.message;
+                        if (errorMessage.includes('already scheduled') || errorMessage.includes('within 30 minutes')) {
+                            toastMessage('error',errorMessage);
+                            // toastMessage('error',Object.values(error.response.data).toString());
+                        } else {
+                            toastMessage('error',Object.values(error.response.data).toString());
+                        }
+                    } else {
+                        toastMessage('error',Object.values(error.response.data).toString());
+                    }
+                    reject(error)
+                })
+                setSubmitting(false);
+        })
     };
 
     return (
@@ -138,7 +128,7 @@ const BookAppointment = () => {
                                     <label htmlFor="appointmentTime" className="block text-sm font-medium text-gray-700">Appointment Time (24 Hours)</label>
                                     <Field
                                         name="appointmentTime"
-                                        type="text"
+                                        type="time"
                                         className="mt-1 block w-full px-3 py-2 border rounded"
                                     />
                                     <ErrorMessage name="appointmentTime" component="div" className="text-red-600 text-sm" />

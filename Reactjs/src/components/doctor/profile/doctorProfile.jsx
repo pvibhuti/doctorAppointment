@@ -2,43 +2,45 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { FaEdit } from 'react-icons/fa';
-import decryptionProcess from '../common/decrypt.jsx';
+import decryptionProcess from '../../common/decrypt.jsx';
 import { IoHome } from "react-icons/io5";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { API_URL } from '../../services/config.js';
+import { API_URL } from '../../../services/config.js';
+import { get, post } from '../../../security/axios.js';
+import { toastMessage } from '../../helpers/Toast.jsx';
 
 const MyProfile = () => {
   const [profile, setProfile] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isDocumentEditing, setIsDocumentEditing] = useState(false);
-
-  const token = localStorage.getItem('token');
-
-  const api = axios.create({
-    baseURL: `${API_URL}`,
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  const fetchProfile = async () => {
-    try {
-      const response = await api.get('/getDoctorData');
-      const decryption = await decryptionProcess(response);
-      setProfile(decryption.existingDoctor);
-    } catch (error) {
-      console.error('Error fetching doctor info:', error);
-    }
-  };
+  const [selectedDocuments, setSelectedDocuments] = useState(null);
 
   useEffect(() => {
     fetchProfile();
   }, []);
 
+  const fetchProfile = async () => {
+    return new Promise((resolve, reject) => {
+      get('/getDoctorData')
+        .then((response) => {
+          setProfile(response.data.existingDoctor);
+          resolve(response);
+        })
+        .catch((error) => {
+          console.error('Error fetching doctor info:', error);
+          reject(error);
+        })
+    });
+  };
+
   const handleFileChange = (event) => {
-    setSelectedFile(event.target.files);
+    setSelectedFile(event.target.files[0]);
+  };
+
+  const handleDocumentChange = (event) => {
+    setSelectedDocuments(event.target.files);
   };
 
   const handleFileUpload = async (e) => {
@@ -47,53 +49,52 @@ const MyProfile = () => {
       alert("Please select a file first!");
       return;
     }
-
     const formData = new FormData();
     formData.append('file', selectedFile);
 
-    try {
-      const response = await api.post('/updateProfilePhoto', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      console.log(response);      
-      alert("Upload Successfully.");
-      setIsEditing(false);
-      fetchProfile();
-    } catch (error) {
-      console.error('Error:', error);
-    }
+    return new Promise((resolve, reject) => {
+      post('/updateProfilePhoto', formData)
+        .then((response) => {
+          alert("Profile Photo Upload Successfully.");
+          setIsEditing(false);
+          fetchProfile();
+          resolve(response);
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+          toastMessage('error', error.response.data.message || "error Upload Image");
+          reject(error);
+        })
+    })
   };
+
 
   const handleDocumentUpload = async (e) => {
     e.preventDefault();
-    if (selectedFile.length === 0) {
-      alert("Please select files first!");
+    if (!selectedDocuments || selectedDocuments.length === 0) {
+      alert("Please select documents first!");
       return;
     }
 
     const formData = new FormData();
-    Array.from(selectedFile).forEach((file) => {
+    Array.from(selectedDocuments).forEach((file) => {
       formData.append('file', file);
     });
 
-    try {
-      const response = await api.post('/uploadDocuments', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      console.log("Upload Document", response.data);
-      const decryption = await decryptionProcess(response);
-      console.log("Decrypt Data", decryption.data);
-
-      toast.success(decryption.data);
-      alert("Documents Uploaded Successfully.")
-      setIsDocumentEditing(false);
-      fetchProfile();
-    } catch (error) {
-      console.error('Error uploading document:', error);
-      toast.error("Error uploading document.");
-    }
+    return new Promise((resolve, reject) => {
+      post("/uploadDocuments", formData)
+        .then((response) => {
+          alert("Documents Uploaded Successfully.")
+          setIsDocumentEditing(false);
+          fetchProfile();
+          resolve(response);
+        })
+        .catch((error) => {
+          console.error('Error uploading document:', error);
+          toastMessage('error', error.response.data.message || "Error uploading document.");
+          reject(error)
+        })
+    })
   };
 
   return (
@@ -101,7 +102,7 @@ const MyProfile = () => {
       <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-bold text-gray-700">Profile</h1>
-          <Link to="/updateProfile">
+          <Link to="/doctor/updateProfile">
             <FaEdit className="text-gray-500 hover:text-gray-800" size={20} />
           </Link>
         </div>
@@ -145,20 +146,6 @@ const MyProfile = () => {
         {/* Document Upload Section */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold">Uploaded Documents</h2>
-          {/* {profile.degreeCertificate &&
-            profile.degreeCertificate.map((doc, index) => (
-              <div key={index} className="flex items-center justify-between mb-2">
-                <span>{doc}</span>
-                <a
-                  href={`${API_URL}/uploads/${doc}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:underline"
-                >
-                  View
-                </a>
-              </div>
-            ))} */}
           <button
             className="flex items-center space-x-2 px-3 py-1 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700"
             onClick={() => setIsDocumentEditing(!isDocumentEditing)}
@@ -175,7 +162,7 @@ const MyProfile = () => {
               type="file"
               accept="image/*"
               multiple
-              onChange={handleFileChange}
+              onChange={handleDocumentChange}
               className="mt-2 mb-4 block w-full text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-lg cursor-pointer"
             />
             <button
@@ -260,7 +247,7 @@ const MyProfile = () => {
             <IoHome className="inline-block mr-1" />
             Home
           </Link>
-          <Link to="/doctorDashboard" className="text-blue-500 hover:underline">
+          <Link to="/doctor/dashboard" className="text-blue-500 hover:underline">
             Back
           </Link>
         </div>
