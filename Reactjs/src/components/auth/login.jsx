@@ -8,15 +8,26 @@ import { Link, useNavigate } from 'react-router-dom';
 import { API_URL } from '../../services/config';
 import PasswordShowHide from '../common/PasswordShowHide';
 import AuthService from '../../services/AuthServices';
+import { useDispatch } from 'react-redux';
+import { ActionCreators } from '../../store/action/action';
+import { toastMessage } from '../helpers/Toast';
+
+const validationSchema = Yup.object({
+    email: Yup.string()
+        .email('Invalid email format')
+        .required('Email is required')
+        .matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Invalid email format."),
+    password: Yup.string()
+        .required('Password is required')
+        .min(8, "Minimum 8 characters")
+        .max(15, "Maximum 15 characters")
+});
 
 const Login = () => {
-    const navigate = useNavigate();
     const [userType, setUserType] = useState('doctor');
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
 
-    const validationSchema = Yup.object({
-        email: Yup.string().email('Invalid email format').required('Email is required'),
-        password: Yup.string().required('Password is required').min(8, "Minimum 8 characters").max(15, "Maximum 15 characters")
-    });
 
     const handleSubmit = async (values) => {
         debugger;
@@ -25,10 +36,6 @@ const Login = () => {
             ? `${API_URL}/loginPatient`
             : `${API_URL}/loginDoctor`;
 
-        const nevigate = userType === 'patient'
-            ? `/patient/dashboard`
-            : `/doctor/dashboard`;
-
         const loginData = {
             ...values,
             userType,
@@ -36,17 +43,14 @@ const Login = () => {
 
         AuthService.login(loginData, url, navigate)
             .then((response) => {
-                alert('Login Successfully!');
+                toastMessage('success','Login Successfully!');
+                dispatch(ActionCreators.ADD_TOKEN(response.data.token))
                 navigate(userType === 'patient' ? '/patient/dashboard' : '/doctor/dashboard');
             })
             .catch((error) => {
                 console.error('Login error:', error);
             });
     }
-
-    const handleForgetPassword = () => {
-        navigate(userType === 'doctor' ? '/doctor/forgotPassword' : '/patient/forgotPassword');
-    };
 
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center">

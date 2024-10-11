@@ -1,5 +1,7 @@
 import axios from "axios";
 import { API_URL } from "../services/config";
+import Security from "./Security";
+import { toastMessage } from "../components/helpers/Toast";
 
 function AxiosMiddleware(method, url, data, options) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('token')}`;
@@ -41,5 +43,28 @@ export function patch(url, data = [], options = {}) {
 export function deleteAPI(url, data = [], options = {}) {
     return AxiosMiddleware('delete', API_URL + url, data, options)
 }
+
+// axios.interceptors.response.use(
+//     (response) => {
+//         if (response.data.mac !== undefined) {            
+//             response = new Security().decrypt(response.data)           
+//             return response;
+//         }
+//         return response
+//     },
+//     (error) => {
+//         if (error.response.status === 423) {
+//             localStorage.clear()
+//         }
+//         if (error.response.status === 401) {
+//             var userdata = localStorage.getItem('token');
+//             if (userdata) {
+//                 toastMessage('error', error.response.data.message);
+//             }
+//             localStorage.clear()
+//         }
+//         return Promise.reject(error);
+//     }
+// )
 
 export default AxiosMiddleware;

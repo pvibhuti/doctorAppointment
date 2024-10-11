@@ -28,7 +28,7 @@ const ForgotPassword = () => {
     return new Promise((resolve, reject) => {
       post("/sendOTPForgotPassword", { email: values.email })
         .then((response) => {
-          alert('OTP sent successfully.');
+          toastMessage('success','OTP sent successfully.');
           setEmail(values.email);
           setStep(2);
           resolve(response);
@@ -51,7 +51,7 @@ const ForgotPassword = () => {
         confirmPassword: values.confirmPassword,
       })
         .then((response) => {
-          alert('Password changed successfully.');
+          toastMessage('success','Password changed successfully.');
           navigate('/login');
           resolve(response);
         })

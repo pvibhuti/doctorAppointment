@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import { BrowserRouter } from 'react-router-dom';
 import AuthRoute from "../components/auth/AuthRoute";
 import DoctorDashboard from "../components/doctor/DoctorDashboard";
 import Appointments from "../components/doctor/appointment/Appointment";
@@ -17,164 +18,141 @@ import RegisterForm from "../components/auth/register";
 import Login from "../components/auth/login";
 import Home from "../components/layout/home";
 
-let routes = [
+const routes = [
     {
-        path: '/doctor/dashboard',
-        layout: 'doctor',
-        auth: false,
-        component: <DoctorDashboard />,
-    },
-    {
-        path: '/doctor/appointments',
-        layout: 'doctor',
-        auth: false,
-        component: <Appointments />,
-    },
-    {
-        path: '/doctor/changePassword',
+        path: 'dashboard',
         layout: 'doctor',
         auth: true,
-        component: <ChangePassword />,
+        component: <DoctorDashboard />
     },
     {
-        path: '/doctor/forgotPassword',
+        path: 'appointments',
         layout: 'doctor',
-        auth: false,
-        component: <ForgotPassword />,
+        auth: true,
+        component: <Appointments />
     },
     {
-        path: '/doctor/updateProfile',
+        path: 'changePassword',
         layout: 'doctor',
-        auth: false,
-        component: <UpdateProfile />,
+        auth: true,
+        component: <ChangePassword />
     },
     {
-        path: '/doctor/myProfile',
+        path: 'updateProfile',
         layout: 'doctor',
+        auth: true,
+        component: <UpdateProfile />
+    },
+    {
+        path: 'myProfile',
+        layout: 'doctor',
+        auth: true,
+        component: <MyProfile />
+    },
+    {
+        path: 'forgotPassword',
+        layout:"doctor",
         auth: false,
-        component: <MyProfile />,
+        component: <ForgotPassword />
     },
 
-
-    //   Patient
+    // Patient Routes
     {
-        path: '/patient/dashboard',
-        layout: 'patient',
-        auth: false,
-        component: <PatientDashboard />,
-    },
-    {
-        path: '/patient/appointments',
-        layout: 'patient',
-        auth: false,
-        component: <AppointmentLists />,
-    },
-    {
-        path: '/patient/changePassword',
+        path: 'dashboard',
         layout: 'patient',
         auth: true,
-        component: <ChangePatientPassword />,
+        component: <PatientDashboard />
     },
     {
-        path: '/patient/forgotPassword',
+        path: 'appointments',
         layout: 'patient',
-        auth: false,
-        component: <ForgotPatientPassword />,
+        auth: true,
+        component: <AppointmentLists />
     },
     {
-        path: '/patient/myProfile',
+        path: 'changePassword',
         layout: 'patient',
-        auth: false,
-        component: <PatientProfile />,
+        auth: true,
+        component: <ChangePatientPassword />
     },
     {
-        path: '/patient/updateProfile',
+        path: 'updateProfile',
         layout: 'patient',
-        auth: false,
-        component: <UpdatePatientProfile />,
+        auth: true,
+        component: <UpdatePatientProfile />
     },
     {
-        path: '/patient/bookAppointment',
+        path: 'myProfile',
         layout: 'patient',
+        auth: true,
+        component: <PatientProfile />
+    },
+    {
+        path: 'forgotPassword',
+        layout:"patient",
         auth: false,
+        component: <ForgotPatientPassword />
+    },
+    {
+        path: 'bookAppointment',
+        layout: 'patient',
+        auth: true,
         component: <BookAppointment />,
     },
 
-    //Common for all 
+    // Common Routes
     {
         path: '/',
         auth: false,
-        component: <Home />,
+        component: <Home />
     },
     {
         path: '/login',
-        auth: true,
-        component: <Login />,
+        auth: false,
+        component: <Login />
     },
     {
         path: '/register',
         auth: false,
-        component: <RegisterForm />,
+        component: <RegisterForm />
     },
-
 ];
 
 const RouterPage = () => {
     return (
-        <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<RegisterForm />} />
-            {routes.map((route, index) => {              
-                if (route.layout === 'doctor') {                    
-                    if (route.auth) {
+        <BrowserRouter>
+            <Routes>
+                {routes.map((route, index) => {
+                    if (route.layout === 'doctor') {
                         return (
-                            <Route
-                                key={index}
-                                path={route.path}
-                                element={
-                                    <AuthRoute>
-                                        {route.component}
-                                    </AuthRoute>
-                                }
-                            />
+                            <Route key={index} path="/doctor">
+                                {route.auth ? (
+                                    <Route element={<AuthRoute />} >
+                                        <Route path={route.path} element={route.component} />
+                                    </Route>
+                                ) : (
+                                    <Route path={route.path} element={route.component} />
+                                )}
+                            </Route>
+                        );
+                    } else if (route.layout === 'patient') {
+                        return (
+                            <Route key={index} path="/patient">
+                                {route.auth ? (
+                                    <Route element={<AuthRoute />}>
+                                        <Route path={route.path} element={route.component} />
+                                    </Route>
+                                ) : (
+                                    <Route path={route.path} element={route.component} />
+                                )}
+                            </Route>
                         );
                     } else {
-                        return (
-                            <Route
-                                key={index}
-                                path={route.path}
-                                element={route.component}
-                            />
-                        );
+                        return <Route key={index} path={route.path} element={route.component} />;
                     }
-                } else {
-                    if (route.auth) {
-                        return (
-                            <Route
-                                key={index}
-                                path={route.path}
-                                element={
-                                    <AuthRoute>
-                                        {route.component}
-                                    </AuthRoute>
-                                }
-                            />
-                        );
-                    } else {
-                        return (
-                            <Route
-                                key={index}
-                                path={route.path}
-                                element={route.component}
-                            />
-                        );
-                    }
-
-                }
-            }
-            )}
-        </Routes>
+                })}
+            </Routes>
+        </BrowserRouter >
     );
 };
 

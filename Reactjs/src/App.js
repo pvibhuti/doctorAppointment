@@ -1,16 +1,18 @@
 import './App.css';
 import React from 'react';
-import { BrowserRouter } from 'react-router-dom';
-// import DoctorRouter from './routes/doctor/DoctorRoute';
-// import PatientRouter from './routes/patient/PatientRoute';
-// import CommonRouter from './routes/CommonRoute';
 import RouterPage from './routes';
+import { Provider } from 'react-redux';
+import store, { persistor } from './store/store';
+// import { persistor, store } from './redux/store';
+import { PersistGate } from 'redux-persist/integration/react';
 
 function App() {
   return (
-    <BrowserRouter>
-      <RouterPage />
-    </BrowserRouter>
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <RouterPage />
+      </PersistGate>
+    </Provider>
   );
 }
 

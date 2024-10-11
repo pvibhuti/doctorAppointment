@@ -2,44 +2,48 @@ import React from 'react';
 import { Formik, Field, Form, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import "../../assets/css/register.css";
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../../services/config';
 import PasswordShowHide from '../common/PasswordShowHide';
 import AuthService from '../../services/AuthServices';
 import { toastMessage } from '../helpers/Toast';
+import Security from '../../security/Security';
+
+const validationSchema = Yup.object({
+    fullName: Yup.string().required('Full Name is required'),
+    email: Yup.string().email('Invalid email format').required('Email is required').matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Invalid email format"),
+    password: Yup.string().min(8, 'Password must be at least 8 characters').required('Password is required'),
+    address: Yup.string().required('Address is required'),
+    phone: Yup.number().required('Phone number is required'),
+    gender: Yup.string().required('Gender is required'),
+});
 
 const RegisterForm = () => {
-    const [userType, setUserType] = React.useState('patient');
+    const [userType, setUserType] = React.useState('doctor');
     const navigate = useNavigate();
 
-    const validationSchema = Yup.object({
-        fullName: Yup.string().required('Full Name is required'),
-        email: Yup.string().email('Invalid email format').required('Email is required'),
-        password: Yup.string().min(8, 'Password must be at least 8 characters').required('Password is required'),
-        address: Yup.string().required('Address is required'),
-        phone: Yup.number().required('Phone number is required'),
-        gender: Yup.string().required('Gender is required'),
-    });
 
     const handleSubmit = async (values, { resetForm }) => {
-        console.log('Form data', values);
         debugger;
-    
-        const url = userType === "patient" 
-            ? `${API_URL}/registerPatient` 
+
+        const url = userType === "patient"
+            ? `${API_URL}/registerPatient`
             : `${API_URL}/registerDoctor`;
-    
+
+        // values = new Security().encryptData(values);
+        // console.log("-------------------",values);
+        
         const registrationData = {
             ...values,
             userType,
         };
-    
-        AuthService.registration(registrationData, url) 
+
+        AuthService.registration(registrationData, url)
             .then((response) => {
                 console.log('Registration successful:', response);
-                alert("Registration Successfully.")
+                toastMessage('success', "Registration Successfully.")
                 navigate("/login");
                 resetForm();
             })
@@ -100,8 +104,7 @@ const RegisterForm = () => {
                             {/* Password */}
                             <div className="mb-4">
                                 <label htmlFor="password" className="block text-gray-700 font-medium mb-1">Password</label>
-                                {/* <Field name="password" type="password" className="w-full p-2 border border-gray-300 rounded-md" placeholder="Enter your password" /> */}
-                                <PasswordShowHide name="password" placeholder="Entre your password"/>
+                                <PasswordShowHide name="password" placeholder="Entre your password" />
                                 <ErrorMessage name="password" component="div" className="text-red-500 text-sm mt-1" />
                             </div>
 

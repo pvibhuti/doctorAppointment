@@ -35,7 +35,7 @@ const Appointments = () => {
         return new Promise((resolve, reject) => {
             post(url)
                 .then((response) => {
-                    alert(`Appointment ${action === 1 ? 'Approved' : 'Rejected'} Successfully.`);
+                    toastMessage('success',`Appointment ${action === 1 ? 'Approved' : 'Rejected'} Successfully.`);
                     resolve(response);
                 })
                 .catch((error) => {

@@ -7,28 +7,28 @@ import 'react-toastify/dist/ReactToastify.css';
 import { get, patch } from '../../../security/axios.js';
 import { toastMessage } from '../../helpers/Toast.jsx';
 
+const validationSchema = Yup.object({
+  fullName: Yup.string()
+    .min(2, 'Full name must be at least 2 characters')
+    .max(50, 'Full name must not exceed 50 characters')
+    .required('Full name is required'),
+  email: Yup.string()
+    .email('Invalid email address')
+    .required('Email is required'),
+  phone: Yup.string()
+    .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits')
+    .required('Phone number is required'),
+  gender: Yup.string()
+    .oneOf(['male', 'female', 'other'], 'Invalid gender option')
+    .required('Gender is required'),
+  expertise: Yup.string().required('Expertise is required'),
+  designation: Yup.string().required('Designation is required'),
+  shiftStartTime: Yup.string().required('Shift start time is required'),
+  shiftEndTime: Yup.string().required('Shift end time is required'),
+});
+
 const UpdateProfile = () => {
   const [profile, setProfile] = useState({});
-
-  const validationSchema = Yup.object({
-    fullName: Yup.string()
-      .min(2, 'Full name must be at least 2 characters')
-      .max(50, 'Full name must not exceed 50 characters')
-      .required('Full name is required'),
-    email: Yup.string()
-      .email('Invalid email address')
-      .required('Email is required'),
-    phone: Yup.string()
-      .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits')
-      .required('Phone number is required'),
-    gender: Yup.string()
-      .oneOf(['male', 'female', 'other'], 'Invalid gender option')
-      .required('Gender is required'),
-    expertise: Yup.string().required('Expertise is required'),
-    designation: Yup.string().required('Designation is required'),
-    shiftStartTime: Yup.string().required('Shift start time is required'),
-    shiftEndTime: Yup.string().required('Shift end time is required'),
-  });
 
   useEffect(() => {
     fetchProfile();
@@ -53,7 +53,7 @@ const UpdateProfile = () => {
     return new Promise((resolve, reject) => {
       patch("/editDoctorDetails", values)
         .then((response) => {
-          alert('Profile Details updated successfully!');
+          toastMessage('success','Profile Details updated successfully!');
           resolve(response);
         })
         .catch((error) => {

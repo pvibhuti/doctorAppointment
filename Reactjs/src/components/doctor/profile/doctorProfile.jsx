@@ -9,6 +9,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import { API_URL } from '../../../services/config.js';
 import { get, post } from '../../../security/axios.js';
 import { toastMessage } from '../../helpers/Toast.jsx';
+import { useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 
 const MyProfile = () => {
   const [profile, setProfile] = useState({});
@@ -16,6 +18,7 @@ const MyProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDocumentEditing, setIsDocumentEditing] = useState(false);
   const [selectedDocuments, setSelectedDocuments] = useState(null);
+  const doctorData = useSelector((state) => state.doctorProfile); 
 
   useEffect(() => {
     fetchProfile();
@@ -46,7 +49,7 @@ const MyProfile = () => {
   const handleFileUpload = async (e) => {
     e.preventDefault();
     if (!selectedFile) {
-      alert("Please select a file first!");
+      toastMessage('error',"Please select a file first!");
       return;
     }
     const formData = new FormData();
@@ -55,7 +58,7 @@ const MyProfile = () => {
     return new Promise((resolve, reject) => {
       post('/updateProfilePhoto', formData)
         .then((response) => {
-          alert("Profile Photo Upload Successfully.");
+          toastMessage('success',"Profile Photo Upload Successfully.");
           setIsEditing(false);
           fetchProfile();
           resolve(response);
@@ -72,7 +75,7 @@ const MyProfile = () => {
   const handleDocumentUpload = async (e) => {
     e.preventDefault();
     if (!selectedDocuments || selectedDocuments.length === 0) {
-      alert("Please select documents first!");
+      toastMessage('error',"Please select documents first!");
       return;
     }
 
@@ -84,7 +87,7 @@ const MyProfile = () => {
     return new Promise((resolve, reject) => {
       post("/uploadDocuments", formData)
         .then((response) => {
-          alert("Documents Uploaded Successfully.")
+          toastMessage('success',"Documents Uploaded Successfully.")
           setIsDocumentEditing(false);
           fetchProfile();
           resolve(response);

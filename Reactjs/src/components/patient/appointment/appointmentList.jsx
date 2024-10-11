@@ -98,7 +98,7 @@ const AppointmentLists = () => {
                         <tbody>
                             {appointments.map((appointment, index) => (
                                 <tr key={index}>
-                                    <td className="py-2 px-4 border-b">{appointment.doctorId.fullName}</td>
+                                    <td className="py-2 px-4 border-b">{appointment.doctorId?.fullName || 'Unknown Doctor'}</td>
                                     <td className="py-2 px-4 border-b">{moment(appointment.appointmentDate).format('DD-MMM-YYYY')}</td>
                                     <td className="py-2 px-4 border-b">{appointment.appointmentTime}</td>
                                     <td className="py-2 px-4 border-b">{appointment.disease}</td>

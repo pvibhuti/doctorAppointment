@@ -53,7 +53,7 @@ const UpdatePatientProfile = () => {
     return new Promise((resolve, reject) => {
       patch("/editPatient", values)
         .then((response) => {
-          alert('Profile updated successfully!');
+          toastMessage('success','Profile updated successfully!');
           resolve(response);
         })
         .catch((error) => {

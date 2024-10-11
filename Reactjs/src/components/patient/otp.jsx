@@ -40,7 +40,7 @@ const Otp = ({ email }) => {
       });
 
       console.log("Forget password : ", response);
-      alert("password Change Successfully.")
+      toastMessage('success',"password Change Successfully.")
       setMessage(response.data.message);
       navigate("/login");
     } catch (err) {

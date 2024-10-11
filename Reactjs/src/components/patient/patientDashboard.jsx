@@ -5,11 +5,15 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { API_URL } from '../../services/config.js';
 import { get } from '../../security/axios.js';
+import { useSelector, useDispatch } from 'react-redux';
+import { ActionCreators } from '../../store/action/action.js';
 
 const PatientDashboard = () => {
     const [patient, setPatient] = useState({});
     const [appointments, setAppointments] = useState([]);
     const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const patientData = useSelector((state) => state.patientProfile);
 
     useEffect(() => {
         fetchPatientInfo();
@@ -20,6 +24,7 @@ const PatientDashboard = () => {
         return new Promise((resolve, reject) => {
             get(`/getPatientData`)
                 .then((response) => {
+                    dispatch(ActionCreators.GET_PATIENT(response.data.existingPatient));
                     setPatient(response.data.existingPatient);
                     resolve(response);
                 })
@@ -54,10 +59,10 @@ const PatientDashboard = () => {
             {/* Sidebar */}
             <div className="w-64 bg-gray-800 text-white min-h-screen">
                 <div className="p-4">
-                    <h2 className="text-2xl font-semibold">{patient.fullName || 'John Doe'}</h2>
+                    <h2 className="text-2xl font-semibold">{patientData.fullName || 'John Doe'}</h2>
                     <div className="mt-4">
                         <img
-                            src={patient.profilePhoto ? `${API_URL}/uploads/${patient.profilePhoto}` : 'patientPhoto'}
+                            src={patientData.profilePhoto ? `${API_URL}/uploads/${patientData.profilePhoto}` : 'patientPhoto'}
                             alt="Profile"
                             className="rounded-full w-20 h-20"
                         />
@@ -102,7 +107,7 @@ const PatientDashboard = () => {
                         <tbody>
                             {appointments.map((appointment, index) => (
                                 <tr key={index}>
-                                    <td className="py-2 px-4 border-b">{appointment.doctorId.fullName}</td>
+                                    <td className="py-2 px-4 border-b">{appointment.doctorId?.fullName || 'Unknown Doctor'}</td>
                                     <td className="py-2 px-4 border-b">{moment(appointment.appointmentDate).format('DD-MMM-YYYY')}</td>
                                     {/* <td className="py-2 px-4 border-b">{appointment.appointmentDate}</td> */}
                                     <td className="py-2 px-4 border-b">{appointment.appointmentTime}</td>

@@ -6,29 +6,30 @@ import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../../services/config';
 import PasswordShowHide from '../common/PasswordShowHide';
 import { post } from '../../security/axios';
+import { toastMessage } from '../helpers/Toast';
+
+const validationSchema = Yup.object().shape({
+  password: Yup.string()
+    .required('Current password is required'),
+  newPassword: Yup.string()
+    .required('New password is required')
+    .min(8, 'New password must be at least 8 characters'),
+  confirmPassword: Yup.string()
+    .oneOf([Yup.ref('newPassword'), null], 'Passwords must match')
+    .required('Confirm new password is required'),
+});
 
 const ChangePassword = () => {
   const navigate = useNavigate();
-
-  const validationSchema = Yup.object().shape({
-    password: Yup.string()
-      .required('Current password is required'),
-    newPassword: Yup.string()
-      .required('New password is required')
-      .min(8, 'New password must be at least 8 characters'),
-    confirmPassword: Yup.string()
-      .oneOf([Yup.ref('newPassword'), null], 'Passwords must match')
-      .required('Confirm new password is required'),
-  });
 
   const handleSubmit = async (values, { setSubmitting, setStatus }) => {
     return new Promise((resolve, reject) => {
       post("/changesPassword", values)
         .then((response) => {
           resolve(response);
-          alert("Password changed successfully.");
+          toastMessage('success',"Password changed successfully.");
           setStatus({ message: response.data.message, error: '' });
-          navigate("/doctor/dashboard"); 
+          navigate("/doctor/dashboard");
         })
         .catch((error) => {
           console.error("Error occurred while changing password", error);

@@ -4,6 +4,7 @@ import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
 import PasswordShowHide from '../common/PasswordShowHide';
 import { post } from '../../security/axios';
+import { toastMessage } from '../helpers/Toast';
 
 const ChangePatientPassword = () => {
   const navigate = useNavigate();
@@ -20,11 +21,10 @@ const ChangePatientPassword = () => {
   });
 
   const handleSubmit = async (values, { setSubmitting, setStatus }) => {
-
     return new Promise((resolve, reject) => {
       post("/changePatientPassword", values)
         .then((response) => {
-          alert("password Change Successfully.")
+          toastMessage('success',"password Change Successfully.")
           setStatus({ message: response.data.message, error: '' });
           navigate("/patient/dashboard");
           resolve(response);

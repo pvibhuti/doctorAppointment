@@ -7,6 +7,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { get, post } from '../../../security/axios';
 import { toastMessage } from '../../helpers/Toast';
+import LoaderButton from '../../common/buttonLoader';
 
 const validationSchema = Yup.object({
     doctorId: Yup.string().required('Please select a doctor'),
@@ -35,7 +36,6 @@ const BookAppointment = () => {
                 })
                 .catch((error) => {
                     console.error('Error fetching doctors:', error);
-                    reject(error)
                 })
         })
     };
@@ -44,9 +44,10 @@ const BookAppointment = () => {
         return new Promise((resolve, reject) => {
             post("/bookAppointment", values)
                 .then((response) => {
-                    alert("Appointment Booked Successfully.")
+                    toastMessage('success',"Appointment Booked Successfully.")
                     resetForm();
                     navigate('/patient/dashboard');
+                    setSubmitting(false);
                     resolve(response);
                 })
                 .catch((error) => {
@@ -54,17 +55,15 @@ const BookAppointment = () => {
                     if (error.response && error.response.data.message) {
                         const errorMessage = error.response.data.message;
                         if (errorMessage.includes('already scheduled') || errorMessage.includes('within 30 minutes')) {
-                            toastMessage('error',errorMessage);
-                            // toastMessage('error',Object.values(error.response.data).toString());
+                            toastMessage('error', errorMessage);
                         } else {
-                            toastMessage('error',Object.values(error.response.data).toString());
+                            toastMessage('error', Object.values(error.response.data).toString());
                         }
                     } else {
-                        toastMessage('error',Object.values(error.response.data).toString());
+                        toastMessage('error', Object.values(error.response.data).toString());
                     }
-                    reject(error)
+                    setSubmitting(false);
                 })
-                setSubmitting(false);
         })
     };
 
@@ -128,8 +127,9 @@ const BookAppointment = () => {
                                     <label htmlFor="appointmentTime" className="block text-sm font-medium text-gray-700">Appointment Time (24 Hours)</label>
                                     <Field
                                         name="appointmentTime"
-                                        type="time"
+                                        type="text"
                                         className="mt-1 block w-full px-3 py-2 border rounded"
+                                        placeholder="09:00 Or 14:00 "
                                     />
                                     <ErrorMessage name="appointmentTime" component="div" className="text-red-600 text-sm" />
                                 </div>
@@ -148,13 +148,7 @@ const BookAppointment = () => {
 
                                 {/* Submit Button */}
                                 <div>
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                                    >
-                                        {isSubmitting ? 'Booking...' : 'Book Appointment'}
-                                    </button>
+                                    <LoaderButton isLoading={isSubmitting} buttonText='Book Appointment' loadingText="Booking..."/>
                                 </div>
                             </Form>
                         )}
