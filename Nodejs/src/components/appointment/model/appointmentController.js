@@ -34,6 +34,9 @@ exports.bookAppointment = async (req, res, next) => {
         if (!doctorData) {
             return sendError(req, res, { message: "Doctor not found." }, 404);
         }
+        if (!doctorData.shiftStartTime && !doctorData.shiftEndTime) {
+            return sendError(req, res, { message: "doctor on leave. Doctor please select another doctor." }, 404);
+        }
 
         const appointmentTimeMoment = moment(appointmentTime, 'HH:mm');
 

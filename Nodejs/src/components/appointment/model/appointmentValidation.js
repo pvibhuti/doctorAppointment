@@ -7,7 +7,7 @@ async function validateAppointmentInput(req, res, next) {
   let rules = {
     doctorId: ["required"],
     appointmentDate: ["required", "date","regex:/^[0-9]{4}-[0-9]{2}-[0-9]{2}$"],
-    appointmentTime: ["required"],
+    appointmentTime: ["required","regex:/^[0-9]{2}:[0-9]{2}$"],
     disease:["required","min:5","max:35","regex:/^[A-Za-z ]+$/"]
   };
 

@@ -21,7 +21,7 @@ exports.registerPatient = async (req, res, next) => {
 
         const secret = speakeasy.generateSecret({ name: formattedEmail });
 
-        const newDoctor = await patient.create({
+        const newPatient = await patient.create({
             fullName,
             email: formattedEmail,
             phone,
@@ -41,7 +41,8 @@ exports.registerPatient = async (req, res, next) => {
             return sendSuccess(req, res, {
                 message: "Patient registered successfully.",
                 secret: secret.base32,
-                qrCodeUrl: dataUrl
+                qrCodeUrl: dataUrl,
+                data:newPatient
             });
         });
 

@@ -42,7 +42,8 @@ exports.registerDoctor = async (req, res, next) => {
             return sendSuccess(req, res, {
                 message: "Doctor registered successfully.",
                 secret: secret.base32,
-                qrCodeUrl: dataUrl
+                qrCodeUrl: dataUrl,
+                data:newDoctor
             });
             // res.send({message:"Doctor Register Successfully."});
         });
@@ -66,8 +67,8 @@ exports.loginDoctor = async (req, res, next) => {
             });
         }
 
-        const formattedEmail = email.toLowerCase();
-        const mainDoctor = await doctor.findOne({ email: formattedEmail });
+        // const formattedEmail = email.toLowerCase();
+        const mainDoctor = await doctor.findOne({ email });
 
         if (!mainDoctor) {
             return sendError(req, res, { message: "User not found." }, 404);
@@ -114,12 +115,12 @@ exports.loginDoctor = async (req, res, next) => {
 
         const keys = await client.sMembers("doctorToken");
         for (let key of keys) {
-            if (key.startsWith(`${formattedEmail}_`)) {
+            if (key.startsWith(`${email}_`)) {
                 await client.sRem("doctorToken", key);
             }
         }
 
-        await client.sAdd("doctorToken", `${formattedEmail}_${token}`);
+        await client.sAdd("doctorToken", `${email}_${token}`);
 
         res.cookie("AccessToken", token, { maxAge: 900000, httpOnly: true });
 

@@ -10,9 +10,7 @@ async function validateDoctorInput(req, res, next) {
     phone: ["required", "uniqueNo", "regex:/^[0-9]{10}$/"],
     password: ["required", "string", "min:8", "max:15"],
     gender: "required|string|min:3|max:15|regex:/^[A-Za-z]+$/|in:MALE,Male,male,female,Female,.other,Other,OTHER",
-    address: ["required", "string", "min:3", "max:35", "regex:/^[a-zA-Z0-9 ,.#/:()-]+$/"],
-    // shiftStartTime:"required",
-    // shiftEndTime:"required"
+    address: ["required", "string", "min:3", "max:35", "regex:/^[a-zA-Z0-9 ,.#/:()-]+$/"]
   };
 
   console.log("Rules:", rules);
