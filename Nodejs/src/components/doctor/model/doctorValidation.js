@@ -3,7 +3,6 @@ const validator = require("../../validate.js");
 const commonfun = require("../../Utils/CommonUtils.js");
 
 async function validateDoctorInput(req, res, next) {
-
   let rules = {
     fullName: "required|string|uniqueName|min:3|max:15|regex:/^[A-Za-z ]+$/",
     email: ["required", "emailExist", "email", "regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/"],

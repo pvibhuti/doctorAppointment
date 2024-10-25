@@ -1,5 +1,4 @@
 const { createHash, sendSuccess, sendError, generateOTP, sendEmail } = require("../../Utils/CommonUtils.js");
-const { Message } = require("twilio/lib/twiml/MessagingResponse.js");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken')
 const config = require('config');
@@ -9,11 +8,8 @@ const qrcode = require('qrcode');
 const client = require("../../Utils/redisClient.js");
 const doctor = require("./doctor.js");
 const patient = require("../../patient/model/patient.js");
-const { decryptedDataResponse } = require("../../Utils/decryptData.js");
-const { verifyToken } = require('../../Utils/authToken.js');
-const { json } = require("body-parser");
 
-exports.registerDoctor = async (req, res, next) => {
+const registerDoctor = async (req, res, next) => {
     try {
         const { fullName, email, phone, password, gender, address } = req.body;
         console.log("req.body", req.body);
@@ -43,7 +39,7 @@ exports.registerDoctor = async (req, res, next) => {
                 message: "Doctor registered successfully.",
                 secret: secret.base32,
                 qrCodeUrl: dataUrl,
-                data:newDoctor
+                data: newDoctor
             });
             // res.send({message:"Doctor Register Successfully."});
         });
@@ -57,7 +53,7 @@ exports.registerDoctor = async (req, res, next) => {
     }
 }
 
-exports.loginDoctor = async (req, res, next) => {
+const loginDoctor = async (req, res, next) => {
     const { email, password, otp } = req.body;
 
     try {
@@ -135,7 +131,7 @@ exports.loginDoctor = async (req, res, next) => {
     }
 };
 
-exports.login = async (req, res, next) => {
+const login = async (req, res, next) => {
     const { email, password, otp } = req.body;
 
     try {
@@ -279,15 +275,14 @@ exports.login = async (req, res, next) => {
     }
 };
 
-exports.uploadDocuments = async (req, res, next) => {
+const uploadDocuments = async (req, res, next) => {
     try {
-
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;        
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
-        const existingDoctor = await doctor.findOne({ _id: decoded.doctorId });
+        const existingDoctor = await doctor.findOne({ _id: user.doctorId });
         if (!existingDoctor) {
             return sendError(req, res, { message: "Invalid token or User not found." }, 404);
         }
@@ -297,7 +292,7 @@ exports.uploadDocuments = async (req, res, next) => {
                 message: "Account Deleted, please enter an active account."
             });
         }
-
+        // req.files= req.data
         const filePaths = req.files.map(file => file.filename);
 
         const updateImage = await doctor.findByIdAndUpdate(
@@ -318,14 +313,14 @@ exports.uploadDocuments = async (req, res, next) => {
     }
 };
 
-exports.updateProfilePhoto = async (req, res, next) => {
+const updateProfilePhoto = async (req, res, next) => {
     try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
-        const existingUser = await doctor.findOne({ _id: decoded.doctorId });
+        const existingUser = await doctor.findOne({ _id: user.doctorId });
         if (!existingUser) {
             return sendError(req, res, { message: "Doctor not found" }, 404);
         }
@@ -335,6 +330,8 @@ exports.updateProfilePhoto = async (req, res, next) => {
                 message: "Account Deleted, please enter an active account.",
             });
         }
+
+        console.log("req. user" , req.file);
 
         if (!req.file) {
             return sendError(req, res, { message: "No file uploaded" }, 400);
@@ -352,14 +349,14 @@ exports.updateProfilePhoto = async (req, res, next) => {
     }
 };
 
-exports.getDoctorData = async (req, res, next) => {
+const getDoctorData = async (req, res, next) => {
     try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
-        const existingDoctor = await doctor.findOne({ _id: decoded.doctorId });
+        const existingDoctor = await doctor.findOne({ _id: user.doctorId });
         if (!existingDoctor) {
             return sendError(req, res, { message: "Invalid token or User not found." });
         }
@@ -371,7 +368,7 @@ exports.getDoctorData = async (req, res, next) => {
     }
 }
 
-exports.getDoctors = async (req, res, next) => {
+const getDoctors = async (req, res, next) => {
     try {
         const existingDoctor = await doctor.find();
         if (!existingDoctor) {
@@ -385,16 +382,15 @@ exports.getDoctors = async (req, res, next) => {
     }
 }
 
-exports.editDoctorDetails = async (req, res, next) => {
+const editDoctorDetails = async (req, res, next) => {
     try {
         const { updt } = req.body;
-
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
-        const existingDoctor = await doctor.findOne({ _id: decoded.doctorId });
+        const existingDoctor = await doctor.findOne({ _id: user.doctorId });
         if (!existingDoctor) {
             return sendError(req, res, { message: "Invalid token or User not found." });
         }
@@ -413,30 +409,16 @@ exports.editDoctorDetails = async (req, res, next) => {
     }
 }
 
-exports.decryptionProcess = async (req, res, next) => {
+const changesPassword = async (req, res, next) => {
     try {
-        const { mac, value } = req.body;
-        const decypt = await decryptedDataResponse(mac, value);
-
-        return res.send(decypt);
-    } catch (error) {
-        console.log(error);
-        return sendError(req, res, { message: "Data not encypt.", error: error.message, });
-    }
-};
-
-
-exports.changesPassword = async (req, res, next) => {
-    try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
-        const doctorId = decoded.doctorId;
+        const doctorId = user.doctorId;
 
         const { password, newPassword, confirmPassword } = req.body;
-        console.log("req.body ", req.body);
 
         const userData = await doctor.findById({ _id: doctorId });
 
@@ -445,7 +427,7 @@ exports.changesPassword = async (req, res, next) => {
             return sendError(req, res, { message: "Incorrect password" });
         }
 
-        if (password === newPassword ) {
+        if (password === newPassword) {
             return sendError(req, res, { message: "New Password must be different from current." });
         }
 
@@ -469,13 +451,13 @@ exports.changesPassword = async (req, res, next) => {
     }
 }
 
-exports.sendOTPForgotPassword = async (req, res, next) => {
+const sendOTPForgotPassword = async (req, res, next) => {
     try {
         const { email } = req.body;
 
         const formattedEmail = email.toLowerCase();
 
-        const userData = await doctor.findOne({email:formattedEmail });
+        const userData = await doctor.findOne({ email: formattedEmail });
 
         if (userData.email !== formattedEmail) {
             return sendError(req, res, { message: "Wrong Email Id." });
@@ -507,12 +489,11 @@ exports.sendOTPForgotPassword = async (req, res, next) => {
 
 };
 
-exports.forgotPassword = async (req, res, next) => {
+const forgotPassword = async (req, res, next) => {
     try {
-        
-        const { email , otp, newPassword, confirmPassword } = req.body;
+        const { email, otp, newPassword, confirmPassword } = req.body;
         const formattedEmail = email.toLowerCase();
-                
+
         const userData = await doctor.findOne({ email: formattedEmail });
         if (!userData) {
             return sendError(req, res, { message: "User Not Found" });
@@ -541,3 +522,5 @@ exports.forgotPassword = async (req, res, next) => {
         });
     }
 };
+
+module.exports = { registerDoctor, loginDoctor, login, uploadDocuments, updateProfilePhoto, getDoctorData, changesPassword, sendOTPForgotPassword, forgotPassword , editDoctorDetails, getDoctors};

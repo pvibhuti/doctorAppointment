@@ -145,4 +145,4 @@ function createReferralCode(email, username) {
 }
 
 
-module.exports = { createHash, sendSuccess, sendError, generateOTP, sendEmail, upload, uploadAudio, createReferralCode , sendAppointmentEmail}
+module.exports = { createHash, sendSuccess, sendError, generateOTP, sendEmail, upload, uploadAudio, createReferralCode , sendAppointmentEmail, fileFilterConfig, storageConfig}

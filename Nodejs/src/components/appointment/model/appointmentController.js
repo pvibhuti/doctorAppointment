@@ -1,24 +1,17 @@
-const { createHash, sendSuccess, sendError, sendAppointmentEmail } = require("../../Utils/CommonUtils.js");
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const config = require('config');
-const jwtSecret = config.get('JWTSECRET');
-const speakeasy = require('speakeasy');
-const qrcode = require('qrcode');
-const client = require("../../Utils/redisClient.js");
+const { sendSuccess, sendError, sendAppointmentEmail } = require("../../Utils/CommonUtils.js");
 const appointment = require("./appointment.js");
 const moment = require('moment');
-const { verifyToken } = require('../../Utils/authToken.js');
 const doctor = require("../../doctor/model/doctor.js");
 const patient = require("../../patient/model/patient.js");
+const notification = require("../../notification/model/notification.js");
+// const { io } = require('../../../index.js');
 
-exports.bookAppointment = async (req, res, next) => {
+const bookAppointment = async (req, res, next) => {
     try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Invalid token." }, 403);
         }
-        console.log("decoded", decoded);
 
         const { doctorId, appointmentDate, appointmentTime, appointmentFor, disease } = req.body;
 
@@ -74,14 +67,14 @@ exports.bookAppointment = async (req, res, next) => {
             });
         }
 
-        const patientData = await patient.findById(decoded.patientId);
+        const patientData = await patient.findById(user.patientId);
         if (!patientData) {
             return sendError(req, res, { message: "Patient not found." }, 404);
         }
 
         const newAppointment = await appointment.create({
             doctorId,
-            patientId: decoded.patientId,
+            patientId: user.patientId,
             appointmentDate: appointmentDateFormatted,
             appointmentTime: appointmentTimeFormatted,
             appointmentFor,
@@ -117,20 +110,25 @@ exports.bookAppointment = async (req, res, next) => {
 };
 
 //Get Appointment For Doctor With Filter
-exports.getAppointment = async (req, res, next) => {
+const getAppointment = async (req, res, next) => {
     try {
-        const {  day, time, status } = req.query;
-
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
+        const { day, time, status } = req.query;
 
-        let filter = { doctorId: decoded.doctorId };
+        let filter = { doctorId: user.doctorId };
+        const today = moment().format("YYYY-MM-DD");
+        console.log("today", today);
 
-        let today = moment().startOf('day').format('YYYY-MM-DD');        
-        let tomorrow = moment().add(1, 'days').startOf('day').format('YYYY-MM-DD');
-        let beforeToday = { $lt: today };
+        const tomorrow = moment().add(1, 'days').format("YYYY-MM-DD");
+        console.log("tomorrow", tomorrow);
+
+        let beforeToday = moment().subtract(1, 'days').format("YYYY-MM-DD");
+        console.log("before", beforeToday);
+
+        // let beforeToday = { $lt: today };
         let underWeek = { $gte: today, $lt: moment().add(7, 'days').startOf('day').format('YYYY-MM-DD') };
         let thisMonth = { $gte: moment().startOf('month').toDate(), $lt: moment().add(1, 'month').startOf('month').format('YYYY-MM-DD') };
 
@@ -178,10 +176,10 @@ exports.getAppointment = async (req, res, next) => {
     }
 };
 
-exports.deleteAppointment = async (req, res, next) => {
+const deleteAppointment = async (req, res, next) => {
     try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
@@ -203,10 +201,10 @@ exports.deleteAppointment = async (req, res, next) => {
     }
 };
 
-exports.editAppointment = async (req, res, next) => {
+const editAppointment = async (req, res, next) => {
     try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
@@ -229,90 +227,20 @@ exports.editAppointment = async (req, res, next) => {
     }
 };
 
-exports.totalAppointment = async (req, res, next) => {
+const allcountAppointment = async (req, res, next) => {
     try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Invalid token." }, 403);
         }
 
-        const totalAppointments = await appointment.countDocuments({ doctorId: decoded.doctorId });
-        return sendSuccess(req, res, {
-            message: "Total appointments fetched successfully.",
-            totalAppointments
-        });
-
-    } catch (error) {
-        console.error('Error fetching total appointments:', error);
-        return sendError(req, res, {
-            message: "Error fetching total appointments.",
-            error: error.message
-        }, 500);
-    }
-};
-
-exports.todaysAppointment = async (req, res, next) => {
-    try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
-            return sendError(req, res, { message: "Invalid token." }, 403);
-        }
+        const totalAppointments = await appointment.countDocuments({ doctorId: user.doctorId });
 
         const today = moment().format("YYYY-MM-DD");
-        const todayAppointments = await appointment.countDocuments({ doctorId: decoded.doctorId, appointmentDate: today });
-
-        return sendSuccess(req, res, {
-            message: `Today's appointments fetched successfully.`,
-            todayAppointments
-        });
-
-    } catch (error) {
-        console.error('Error fetching today\'s appointments:', error);
-        return sendError(req, res, {
-            message: "Error fetching today's appointments.",
-            error: error.message
-        }, 500);
-    }
-};
-
-exports.tomorrowsAppointment = async (req, res, next) => {
-    try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
-            return sendError(req, res, { message: "Invalid token." }, 403);
-        }
+        const todayAppointments = await appointment.countDocuments({ doctorId: user.doctorId, appointmentDate: today });
 
         const tomorrow = moment().add(1, 'days').format("YYYY-MM-DD");
-        const tomorrowAppointments = await appointment.countDocuments({ doctorId: decoded.doctorId, appointmentDate: tomorrow });
-
-        return sendSuccess(req, res, {
-            message: `Tomorrow's appointments fetched successfully.`,
-            tomorrowAppointments
-        });
-
-    } catch (error) {
-        console.error('Error fetching tomorrow\'s appointments:', error);
-        return sendError(req, res, {
-            message: "Error fetching tomorrow's appointments.",
-            error: error.message
-        }, 500);
-    }
-};
-
-exports.allcountAppointment =async(req, res, next) => {
-    try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
-            return sendError(req, res, { message: "Invalid token." }, 403);
-        }
-
-        const totalAppointments = await appointment.countDocuments({ doctorId: decoded.doctorId });
-
-        const today = moment().format("YYYY-MM-DD");
-        const todayAppointments = await appointment.countDocuments({ doctorId: decoded.doctorId, appointmentDate: today });
-
-        const tomorrow = moment().add(1, 'days').format("YYYY-MM-DD");
-        const tomorrowAppointments = await appointment.countDocuments({ doctorId: decoded.doctorId, appointmentDate: tomorrow });
+        const tomorrowAppointments = await appointment.countDocuments({ doctorId: user.doctorId, appointmentDate: tomorrow });
 
         return sendSuccess(req, res, {
             message: "Total appointments fetched successfully.",
@@ -330,17 +258,17 @@ exports.allcountAppointment =async(req, res, next) => {
     }
 }
 
-exports.upcomingAppointment = async (req, res, next) => {
+const upcomingAppointment = async (req, res, next) => {
     try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Invalid token." }, 403);
         }
 
         const today = moment().startOf('day').format('YYYY-MM-DD')
-        
+
         const upcomingAppointments = await appointment.find({
-            doctorId: decoded.doctorId,
+            doctorId: user.doctorId,
             appointmentDate: { $gt: today }
         }).populate('patientId', 'fullName');
 
@@ -362,17 +290,26 @@ exports.upcomingAppointment = async (req, res, next) => {
     }
 };
 
-exports.approveAppointment = async (req, res, next) => {
+const approveAppointment = async (req, res, next) => {
     try {
         const id = req.body.id || req.query.id || req.params.id;
+        const io = req.app.get('socketio');
 
-        const existingAppointment = await appointment.findById(id);
+        if (!id) {
+            return sendError(req, res, { message: "Appointment ID is required." }, 400);
+        }
+
+        const existingAppointment = await appointment.findById(id).populate('doctorId', 'fullName');
+
         if (!existingAppointment) {
             return sendError(req, res, { message: "Appointment not found." }, 404);
         }
 
+        const patientId = existingAppointment.patientId;
         const currentTime = moment();
         const appointmentTime = moment(existingAppointment.appointmentDate);
+
+        console.log('Doctor info:', existingAppointment.doctorId);
 
         if (appointmentTime.diff(currentTime, 'hours') < 24) {
             return sendError(req, res, { message: "You can only approve appointments at least 24 hours before the scheduled time." }, 400);
@@ -382,9 +319,19 @@ exports.approveAppointment = async (req, res, next) => {
             return sendError(req, res, { message: "You cannot approve an appointment that is already in the past." }, 400);
         }
 
-        const updatedAppointment = await appointment.findByIdAndUpdate(id, { status: 1 }, { new: true });
-        return sendSuccess(req, res, { message: "Appointment approved successfully.", updatedAppointment });
+        const msg = `Your appointment has been approved by Dr. ${existingAppointment.doctorId.fullName}`;
+        io.to(patientId.toString()).emit('appointmentNotification', { status: 1, message: msg });
 
+        await notification.create({
+            patientId: existingAppointment.patientId,
+            doctorId: existingAppointment.doctorId,
+            appointmentId: existingAppointment._id,
+            message: msg
+        });
+
+        const updatedAppointment = await appointment.findByIdAndUpdate(id, { status: 1 }, { new: true });
+
+        return sendSuccess(req, res, { message: "Appointment approved successfully.", updatedAppointment });
     } catch (error) {
         console.error('Error approving appointment:', error);
         return sendError(req, res, {
@@ -394,11 +341,13 @@ exports.approveAppointment = async (req, res, next) => {
     }
 };
 
-exports.rejectAppointment = async (req, res, next) => {
+const rejectAppointment = async (req, res, next) => {
     try {
         const id = req.body.id || req.query.id || req.params.id;
 
-        const existingAppointment = await appointment.findById(id);
+        const io = req.app.get('socketio');
+
+        const existingAppointment = await appointment.findById(id).populate('doctorId', 'fullName');
         if (!existingAppointment) {
             return sendError(req, res, { message: "Appointment not found." }, 404);
         }
@@ -414,9 +363,18 @@ exports.rejectAppointment = async (req, res, next) => {
             return sendError(req, res, { message: "You cannot reject an appointment that is already in the past." }, 400);
         }
 
+        const msg = `Your appointment has been rejected by Dr. ${existingAppointment.doctorId.fullName}`;
+        io.to(existingAppointment.patientId.toString()).emit('appointmentNotification', { status: 2, message: msg });
+
+        await notification.create({
+            patientId: existingAppointment.patientId,
+            doctorId: existingAppointment.doctorId,
+            appointmentId: existingAppointment._id,
+            message: msg
+        });
+
         const updatedAppointment = await appointment.findByIdAndUpdate(id, { status: 2 }, { new: true });
         return sendSuccess(req, res, { message: "Appointment rejected successfully.", updatedAppointment });
-
     } catch (error) {
         console.error('Error rejecting appointment:', error);
         return sendError(req, res, {
@@ -427,16 +385,15 @@ exports.rejectAppointment = async (req, res, next) => {
 };
 
 // For Patient Appointment List with Filter
-exports.getAppointmentForPatient = async (req, res, next) => {
+const getAppointmentForPatient = async (req, res, next) => {
     try {
-        const { day, time, status } = req.query;
-
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
-        let filter = { patientId: decoded.patientId };
+        const { day, time, status } = req.query;
+        let filter = { patientId: user.patientId };
 
         let today = moment().startOf('day').format('YYYY-MM-DD');
         let tomorrow = moment().add(1, 'days').startOf('day').format('YYYY-MM-DD');
@@ -488,3 +445,37 @@ exports.getAppointmentForPatient = async (req, res, next) => {
         return sendError(req, res, { message: "Error fetching appointments.", error: error.message }, 500);
     }
 };
+
+const remainAppointment = async (req, res, next) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            return sendError(req, res, { message: "Invalid token." }, 403);
+        }
+
+        const today = moment().startOf('day').format('YYYY-MM-DD')
+
+        const upcomingAppointments = await appointment.find({
+            patientId: user.patientId,
+            appointmentDate: { $gt: today }
+        }).populate('doctorId', 'fullName');
+
+        if (!upcomingAppointments || upcomingAppointments.length === 0) {
+            return sendError(req, res, { message: "No upcoming appointments found." }, 404);
+        }
+
+        return sendSuccess(req, res, {
+            message: "Upcoming appointments fetched successfully.",
+            upcomingAppointments
+        });
+
+    } catch (error) {
+        console.error('Error fetching upcoming appointments:', error);
+        return sendError(req, res, {
+            message: "Error fetching upcoming appointments.",
+            error: error.message
+        }, 500);
+    }
+};
+
+module.exports = { remainAppointment, bookAppointment, upcomingAppointment, getAppointment, deleteAppointment, editAppointment, allcountAppointment, approveAppointment, getAppointmentForPatient, rejectAppointment }

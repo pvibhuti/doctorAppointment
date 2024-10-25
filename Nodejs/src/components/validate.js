@@ -1,5 +1,4 @@
 const Validator = require('validatorjs');
-const admin = require("./admin/model/admin.js");
 const doctor = require('./doctor/model/doctor.js');
 const patient = require('./patient/model/patient.js');
 

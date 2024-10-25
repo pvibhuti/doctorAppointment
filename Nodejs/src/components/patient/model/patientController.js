@@ -1,5 +1,4 @@
 const { createHash, sendSuccess, sendError, generateOTP, sendEmail } = require("../../Utils/CommonUtils.js");
-const { Message } = require("twilio/lib/twiml/MessagingResponse.js");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken')
 const config = require('config');
@@ -9,10 +8,8 @@ const qrcode = require('qrcode');
 const client = require("../../Utils/redisClient.js");
 const patient = require("./patient.js");
 const appointment = require("../../appointment/model/appointment.js");
-const { verifyToken } = require('../../Utils/authToken.js');
 
-
-exports.registerPatient = async (req, res, next) => {
+const registerPatient = async (req, res, next) => {
     try {
         const { fullName, email, phone, password, gender, address } = req.body;
         console.log("req.body", req.body);
@@ -42,7 +39,7 @@ exports.registerPatient = async (req, res, next) => {
                 message: "Patient registered successfully.",
                 secret: secret.base32,
                 qrCodeUrl: dataUrl,
-                data:newPatient
+                data: newPatient
             });
         });
 
@@ -55,7 +52,8 @@ exports.registerPatient = async (req, res, next) => {
     }
 }
 
-exports.loginPatient = async (req, res, next) => {
+const loginPatient = async (req, res, next) => {
+
     const { email, password, otp } = req.body;
 
     try {
@@ -140,16 +138,16 @@ exports.loginPatient = async (req, res, next) => {
     }
 };
 
-exports.editPatient = async (req, res, next) => {
+const editPatient = async (req, res, next) => {
     try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
         const { updt } = req.body;
 
-        const patientExist = await patient.findById({ _id: decoded.patientId });
+        const patientExist = await patient.findById({ _id: user.patientId });
         if (!patientExist) {
             return sendError(req, res, {
                 message: "Patient Not found.",
@@ -169,14 +167,14 @@ exports.editPatient = async (req, res, next) => {
     }
 }
 
-exports.updateProfilePic = async (req, res, next) => {
+const updateProfilePic = async (req, res, next) => {
     try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
-        const patientId = decoded.patientId;
+        const patientId = user.patientId;
 
         const existingUser = await patient.findOne({ _id: patientId });
         if (!existingUser) {
@@ -205,14 +203,14 @@ exports.updateProfilePic = async (req, res, next) => {
     }
 };
 
-exports.getPatientData = async (req, res, next) => {
+const getPatientData = async (req, res, next) => {
     try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
-        const existingPatient = await patient.findOne({ _id: decoded.patientId });
+        const existingPatient = await patient.findOne({ _id: user.patientId });
         if (!existingPatient) {
             return sendError(req, res, { message: "Invalid token or User not found." });
         }
@@ -222,14 +220,14 @@ exports.getPatientData = async (req, res, next) => {
     }
 }
 
-exports.getPatientAppointment = async (req, res, next) => {
+const getPatientAppointment = async (req, res, next) => {
     try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
-        const patientAppointment = await appointment.find({ patientId: decoded.patientId }).populate('doctorId patientId', 'fullName');
+        const patientAppointment = await appointment.find({ patientId: user.patientId }).populate('doctorId patientId', 'fullName');
         if (!patientAppointment) {
             return sendError(req, res, { message: "Invalid token or User not found." });
         }
@@ -239,14 +237,14 @@ exports.getPatientAppointment = async (req, res, next) => {
     }
 }
 
-exports.changePatientPassword = async (req, res, next) => {
+const changePatientPassword = async (req, res, next) => {
     try {
-        const decoded = await verifyToken(req, res);
-        if (!decoded) {
+        const user = req.user;
+        if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
-        const patientId = decoded.patientId;
+        const patientId = user.patientId;
 
         const { password, newPassword, confirmPassword } = req.body;
         console.log("req.body ", req.body);
@@ -282,21 +280,14 @@ exports.changePatientPassword = async (req, res, next) => {
     }
 }
 
-exports.sendOTP = async (req, res, next) => {
+const sendOTP = async (req, res, next) => {
     try {
-        // const decoded = await verifyToken(req, res);
-        // if (!decoded) {
-        //     return sendError(req, res, { message: "Token is invalid." }, 403);
-        // }
-
-        // const patientId = decoded.patientId;
-
         const { email } = req.body;
         const formattedEmail = email.toLowerCase();
 
         const userData = await patient.findOne({ email: formattedEmail });
         if (!userData) {
-            return sendError(req, res, { message: "User not Found." },404);
+            return sendError(req, res, { message: "User not Found." }, 404);
         }
 
         if (userData.email !== formattedEmail) {
@@ -329,15 +320,8 @@ exports.sendOTP = async (req, res, next) => {
 
 };
 
-exports.forgotPatientPassword = async (req, res, next) => {
+const forgotPatientPassword = async (req, res, next) => {
     try {
-        // const decoded = await verifyToken(req, res);
-        // if (!decoded) {
-        //     return sendError(req, res, { message: "Token is invalid." }, 403);
-        // }
-
-        // const patientId = decoded.patientId;
-
         const { email, otp, newPassword, confirmPassword } = req.body;
         const formattedEmail = email.toLowerCase();
         const userData = await patient.findOne({ email: formattedEmail });
@@ -369,3 +353,5 @@ exports.forgotPatientPassword = async (req, res, next) => {
         });
     }
 };
+
+module.exports = { registerPatient, loginPatient, updateProfilePic, editPatient, getPatientData, getPatientAppointment, changePatientPassword, sendOTP, forgotPatientPassword };

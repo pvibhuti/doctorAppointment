@@ -22,7 +22,7 @@ const API_DECRYPT_IV_KEY = crypto
 //Decrypt Data
 async function decryptedDataResponse(mac, value) {
     const buff = Buffer.from(value, 'base64')
-    const decipher = crypto.createDecipheriv(ECNRYPTION_METHOD, API_KEY_DEC, API_DECRYPT_IV_KEY)
+    const decipher = crypto.createDecipheriv('aes-256-cbc', API_KEY_DEC, API_DECRYPT_IV_KEY)
     let decrypted = decipher.update(buff.toString('hex'), 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     // console.log("bff:", decrypted);
