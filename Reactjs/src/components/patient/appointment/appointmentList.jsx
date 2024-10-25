@@ -18,47 +18,35 @@ const AppointmentLists = () => {
     }, []);
 
     const fetchProfile = async () => {
-        return new Promise((resolve, reject) => {
-            get("/getPatientData")
-                .then((response) => {
-                    setProfile(response.data.existingPatient);
-                    resolve(response);
-                })
-                .catch((error) => {
-                    console.error('Error fetching data :', error);
-                    reject(error)
-                })
-        })
+        get("/getPatientData")
+            .then((response) => {
+                setProfile(response.existingPatient);
+            })
+            .catch((error) => {
+                console.error('Error fetching data :', error);
+            })
     };
 
     const fetchAppointments = async () => {
-        return new Promise((resolve, reject) => {
-            get("/getPatientAppointment")
-                .then((response) => {
-                    setAppointments(response.data.patientAppointment || []);
-                    resolve(response);
-                })
-                .catch((error) => {
-                    console.error('Error fetching data:', error);
-                    reject(error)
-                })
-        })
+        get("/getPatientAppointment")
+            .then((response) => {
+                setAppointments(response.patientAppointment || []);
+            })
+            .catch((error) => {
+                console.error('Error fetching data:', error);
+            })
     };
 
     const deleteAppointment = async (id) => {
-        return new Promise((resolve, reject) => {
-            AxiosMiddleware('delete', `${API_URL}/deleteAppointment?id=${id}`)
-                .then((response) => {
-                    toastMessage('success', 'Appointment Deleted Successfully');
-                    fetchAppointments();
-                    resolve(response);
-                })
-                .catch((error) => {
-                    console.error('Error Deleting Appointment:', error);
-                    toastMessage('error', 'Error Deleting Appointment');
-                    reject(error)
-                })
-        })
+        AxiosMiddleware('delete', `${API_URL}/deleteAppointment?id=${id}`)
+            .then((response) => {
+                toastMessage('success', 'Appointment Deleted Successfully');
+                fetchAppointments();
+            })
+            .catch((error) => {
+                console.error('Error Deleting Appointment:', error);
+                toastMessage('error', 'Error Deleting Appointment');
+            })
     };
 
     const logout = () => {

@@ -31,7 +31,7 @@ const BookAppointment = () => {
         return new Promise((resolve, reject) => {
             get("/getDoctors")
                 .then((response) => {
-                    setDoctors(response.data.existingDoctor);
+                    setDoctors(response.existingDoctor);
                     resolve(response);
                 })
                 .catch((error) => {

@@ -39,7 +39,7 @@ const UpdatePatientProfile = () => {
     return new Promise((resolve, reject) => {
       get("/getPatientData")
         .then((response) => {
-          setProfile(response.data.existingPatient);
+          setProfile(response.existingPatient);
           resolve(response);
         })
         .catch((error) => {
@@ -155,7 +155,7 @@ const UpdatePatientProfile = () => {
             </button>
           </div>
           <div>
-            <Link to="/patient/dashboard">
+            <Link to="/patient/myProfile">
               <button
                 type="button"
                 className="w-full bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600"

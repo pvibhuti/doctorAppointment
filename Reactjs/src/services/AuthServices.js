@@ -24,7 +24,7 @@ const errorHandler = (err) => {
 };
 
 const AuthService = {
-  registration: (data, url) => {
+  registration: (url, data) => {
     return new Promise((resolve, reject) => {
       AxiosMiddleware('post', url, data)
         .then((response) => {
@@ -46,7 +46,7 @@ const AuthService = {
     return new Promise((resolve, reject) => {
       AxiosMiddleware('post', url, data)
         .then((response) => {
-          localStorage.setItem("token", response.data.token);
+          localStorage.setItem("token", response.token);
           resolve(response);
         })
         .catch((err) => {

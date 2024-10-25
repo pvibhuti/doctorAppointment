@@ -35,33 +35,24 @@ const UpdateProfile = () => {
   });
 
   const fetchProfile = async () => {
-    return new Promise((resolve, reject) => {
-      get("/getDoctorData")
-        .then((response) => {
-          setProfile(response.data.existingDoctor);
-          resolve(response);
-        })
-        .catch((error) => {
-          console.error('Error fetching doctor info:', error);
-          reject(error);
-        })
-
-    })
+    get("/getDoctorData")
+      .then((response) => {
+        setProfile(response.existingDoctor);
+      })
+      .catch((error) => {
+        console.error('Error fetching doctor info:', error);
+      })
   };
 
   const handleSubmit = async (values) => {
-    return new Promise((resolve, reject) => {
-      patch("/editDoctorDetails", values)
-        .then((response) => {
-          toastMessage('success','Profile Details updated successfully!');
-          resolve(response);
-        })
-        .catch((error) => {
-          reject(error);
-          console.error('Error:', error);
-          toastMessage('error', error.response.data.message || "Error updating details.")
-        })
-    })
+    patch("/editDoctorDetails", values)
+      .then((response) => {
+        toastMessage('success', 'Profile Details updated successfully!');
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+        toastMessage('error', error.response.data.message || "Error updating details.")
+      })
   };
 
   return (

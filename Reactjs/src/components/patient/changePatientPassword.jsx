@@ -25,18 +25,18 @@ const ChangePatientPassword = () => {
       post("/changePatientPassword", values)
         .then((response) => {
           toastMessage('success',"password Change Successfully.")
-          setStatus({ message: response.data.message, error: '' });
+          setStatus({ message: response.message, error: '' });
           navigate("/patient/dashboard");
           resolve(response);
+          setSubmitting(false);
         })
         .catch((error) => {
           setStatus({
             message: '',
             error: error.response?.data?.message || 'Error occurred while changing password',
           });
-          reject(error)
+          setSubmitting(false);
         })
-      setSubmitting(false);
     })
   };
 

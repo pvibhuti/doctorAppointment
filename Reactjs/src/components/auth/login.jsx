@@ -28,10 +28,8 @@ const Login = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
-
     const handleSubmit = async (values) => {
-        debugger;
-
+        // debugger;
         const url = userType === 'patient'
             ? `${API_URL}/loginPatient`
             : `${API_URL}/loginDoctor`;
@@ -44,7 +42,7 @@ const Login = () => {
         AuthService.login(loginData, url, navigate)
             .then((response) => {
                 toastMessage('success','Login Successfully!');
-                dispatch(ActionCreators.ADD_TOKEN(response.data.token))
+                dispatch(ActionCreators.ADD_TOKEN(response.token))
                 navigate(userType === 'patient' ? '/patient/dashboard' : '/doctor/dashboard');
             })
             .catch((error) => {

@@ -23,24 +23,23 @@ const ChangePassword = () => {
   const navigate = useNavigate();
 
   const handleSubmit = async (values, { setSubmitting, setStatus }) => {
-    return new Promise((resolve, reject) => {
-      post("/changesPassword", values)
-        .then((response) => {
-          resolve(response);
-          toastMessage('success',"Password changed successfully.");
-          setStatus({ message: response.data.message, error: '' });
-          navigate("/doctor/dashboard");
-        })
-        .catch((error) => {
-          console.error("Error occurred while changing password", error);
-          setStatus({
-            message: '',
-            error: error.response?.data?.message || 'Error occurred while changing password',
-          });
-          reject(error);
+    post("/changesPassword", values)
+      .then((response) => {
+        toastMessage('success', "Password changed successfully.");
+        console.log("response.............", response);
+        
+        setStatus({ message: response.message, error: '' });
+        setSubmitting(false);
+        navigate("/doctor/dashboard");
+      })
+      .catch((error) => {
+        console.error("Error occurred while changing password", error);
+        setStatus({
+          message: '',
+          error: error.response?.data?.message || 'Error occurred while changing password',
         });
-      setSubmitting(false);
-    });
+        setSubmitting(false);
+      });
   };
 
   return (

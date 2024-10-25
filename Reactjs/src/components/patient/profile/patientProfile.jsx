@@ -21,7 +21,7 @@ const PatientProfile = () => {
     return new Promise((resolve, reject) => {
       get("/getPatientData")
         .then((response) => {
-          setProfile(response.data.existingPatient);
+          setProfile(response.existingPatient);
           resolve(response);
         })
         .catch((error) => {
@@ -38,7 +38,7 @@ const PatientProfile = () => {
   const handleFileUpload = async (e) => {
     e.preventDefault();
     if (!selectedFile) {
-      toastMessage('error',"Please select a file first!");
+      toastMessage('error', "Please select a file first!");
       return;
     }
 
@@ -46,9 +46,15 @@ const PatientProfile = () => {
     formData.append('file', selectedFile);
 
     return new Promise((resolve, reject) => {
-      post("/updateProfilePic", formData)
+      post("/updateProfilePic", formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      )
         .then((response) => {
-          toastMessage('success',"Profile photo upload Successfully.")
+          toastMessage('success', "Profile photo upload Successfully.")
           setIsEditing(false);
           fetchProfile();
           resolve(response);
@@ -56,7 +62,6 @@ const PatientProfile = () => {
         .catch((error) => {
           console.error('Error uploading photo:', error);
           toastMessage('error', error.response.data.message || "Error uploading photo.");
-          // reject(error)
         })
     })
   };

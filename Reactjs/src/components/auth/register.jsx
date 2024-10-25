@@ -24,23 +24,17 @@ const RegisterForm = () => {
     const [userType, setUserType] = React.useState('doctor');
     const navigate = useNavigate();
 
-
     const handleSubmit = async (values, { resetForm }) => {
-        debugger;
-
+        // debugger;
         const url = userType === "patient"
             ? `${API_URL}/registerPatient`
             : `${API_URL}/registerDoctor`;
 
-        // values = new Security().encryptData(values);
-        // console.log("-------------------",values);
-        
         const registrationData = {
-            ...values,
-            userType,
+            ...values
         };
 
-        AuthService.registration(registrationData, url)
+        AuthService.registration(url, registrationData)       
             .then((response) => {
                 console.log('Registration successful:', response);
                 toastMessage('success', "Registration Successfully.")

@@ -13,7 +13,7 @@ const ForgotPassword = () => {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const navigate = useNavigate();
-  
+
   const validationSchemaEmail = Yup.object({
     email: Yup.string().email('Invalid email format').required('Email is required'),
   });
@@ -25,43 +25,37 @@ const ForgotPassword = () => {
   });
 
   const handleSendOTP = async (values, { setSubmitting }) => {
-    return new Promise((resolve, reject) => {
-      post("/sendOTPForgotPassword", { email: values.email })
-        .then((response) => {
-          toastMessage('success','OTP sent successfully.');
-          setEmail(values.email);
-          setStep(2);
-          resolve(response);
-        })
-        .catch((error) => {
-          console.error('Error details:', error.response ? error.response.data : error);
-          toastMessage('error', Object.values(error.response.data).toString());
-          reject(error)
-        })
-      setSubmitting(false);
-    })
+    post("/sendOTPForgotPassword", { email: values.email })
+      .then((response) => {
+        toastMessage('success', 'OTP sent successfully.');
+        setEmail(values.email);
+        setSubmitting(false);
+        setStep(2);
+      })
+      .catch((error) => {
+        console.error('Error details:', error.response ? error.response.data : error);
+        toastMessage('error', Object.values(error.response.data).toString());
+        setSubmitting(false);
+      })
   };
 
   const handleVerifyOTP = async (values, { setSubmitting }) => {
-    return new Promise((resolve, reject) => {
-      post("/forgotPassword", {
-        email,
-        otp: values.otp,
-        newPassword: values.newPassword,
-        confirmPassword: values.confirmPassword,
+    post("/forgotPassword", {
+      email,
+      otp: values.otp,
+      newPassword: values.newPassword,
+      confirmPassword: values.confirmPassword,
+    })
+      .then((response) => {
+        toastMessage('success', 'Password changed successfully.');
+        setSubmitting(false);
+        navigate('/login');
       })
-        .then((response) => {
-          toastMessage('success','Password changed successfully.');
-          navigate('/login');
-          resolve(response);
-        })
-        .catch((error) => {
-          console.log("error Verify OTP ", error.response ? error.response.data : error);
-          toastMessage('error',error.response?.data?.message || 'Error verifying OTP.');
-          reject(error);
-        })
-      setSubmitting(false);
-    });
+      .catch((error) => {
+        console.log("error Verify OTP ", error.response ? error.response.data : error);
+        toastMessage('error', error.response?.data?.message || 'Error verifying OTP.');
+        setSubmitting(false);
+      })
   };
 
   return (
@@ -116,24 +110,12 @@ const ForgotPassword = () => {
 
                 <div className="flex flex-col">
                   <label className="text-gray-600 text-sm">New Password</label>
-                  {/* <Field
-                    type="password"
-                    name="newPassword"
-                    className="bg-gray-100 border border-gray-300 rounded-md px-3 py-2"
-                    placeholder="Enter new password"
-                  /> */}
                   <PasswordShowHide name="newPassword" placeholder="Entre new password" />
                   <ErrorMessage name="newPassword" component="div" className="text-red-500 text-sm" />
                 </div>
 
                 <div className="flex flex-col">
                   <label className="text-gray-600 text-sm">Confirm Password</label>
-                  {/* <Field
-                    type="password"
-                    name="confirmPassword"
-                    className="bg-gray-100 border border-gray-300 rounded-md px-3 py-2"
-                    placeholder="Confirm password"
-                  /> */}
                   <PasswordShowHide name="confirmPassword" placeholder="Entre confirm password" />
                   <ErrorMessage name="confirmPassword" component="div" className="text-red-500 text-sm" />
                 </div>

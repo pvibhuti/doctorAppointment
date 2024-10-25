@@ -18,24 +18,20 @@ const MyProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDocumentEditing, setIsDocumentEditing] = useState(false);
   const [selectedDocuments, setSelectedDocuments] = useState(null);
-  const doctorData = useSelector((state) => state.doctorProfile); 
+  const doctorData = useSelector((state) => state.doctorProfile);
 
   useEffect(() => {
     fetchProfile();
   }, []);
 
   const fetchProfile = async () => {
-    return new Promise((resolve, reject) => {
-      get('/getDoctorData')
-        .then((response) => {
-          setProfile(response.data.existingDoctor);
-          resolve(response);
-        })
-        .catch((error) => {
-          console.error('Error fetching doctor info:', error);
-          reject(error);
-        })
-    });
+    get('/getDoctorData')
+      .then((response) => {
+        setProfile(response.existingDoctor);
+      })
+      .catch((error) => {
+        console.error('Error fetching doctor info:', error);
+      })
   };
 
   const handleFileChange = (event) => {
@@ -49,33 +45,32 @@ const MyProfile = () => {
   const handleFileUpload = async (e) => {
     e.preventDefault();
     if (!selectedFile) {
-      toastMessage('error',"Please select a file first!");
+      toastMessage('error', "Please select a file first!");
       return;
     }
     const formData = new FormData();
     formData.append('file', selectedFile);
+    console.log("Form Data", formData);
+    
 
-    return new Promise((resolve, reject) => {
-      post('/updateProfilePhoto', formData)
-        .then((response) => {
-          toastMessage('success',"Profile Photo Upload Successfully.");
-          setIsEditing(false);
-          fetchProfile();
-          resolve(response);
-        })
-        .catch((error) => {
-          console.error('Error:', error);
-          toastMessage('error', error.response.data.message || "error Upload Image");
-          reject(error);
-        })
-    })
+    post('/updateProfilePhoto', formData)
+      .then((response) => {
+        console.log("RESPOSNE PROFILE data", response);
+        toastMessage('success', "Profile Photo Upload Successfully.");
+        setIsEditing(false);
+        fetchProfile();
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+        toastMessage('error', error.response.data.message || "error Upload Image");
+      })
   };
 
 
   const handleDocumentUpload = async (e) => {
     e.preventDefault();
     if (!selectedDocuments || selectedDocuments.length === 0) {
-      toastMessage('error',"Please select documents first!");
+      toastMessage('error', "Please select documents first!");
       return;
     }
 
@@ -84,20 +79,16 @@ const MyProfile = () => {
       formData.append('file', file);
     });
 
-    return new Promise((resolve, reject) => {
-      post("/uploadDocuments", formData)
-        .then((response) => {
-          toastMessage('success',"Documents Uploaded Successfully.")
-          setIsDocumentEditing(false);
-          fetchProfile();
-          resolve(response);
-        })
-        .catch((error) => {
-          console.error('Error uploading document:', error);
-          toastMessage('error', error.response.data.message || "Error uploading document.");
-          reject(error)
-        })
-    })
+    post("/uploadDocuments", formData)
+      .then((response) => {
+        toastMessage('success', "Documents Uploaded Successfully.")
+        setIsDocumentEditing(false);
+        fetchProfile();
+      })
+      .catch((error) => {
+        console.error('Error uploading document:', error);
+        toastMessage('error', error.response.data.message || "Error uploading document.");
+      })
   };
 
   return (

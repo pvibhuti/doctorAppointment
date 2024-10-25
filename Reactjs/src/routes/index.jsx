@@ -17,6 +17,11 @@ import BookAppointment from "../components/patient/appointment/bookAppintment";
 import RegisterForm from "../components/auth/register";
 import Login from "../components/auth/login";
 import Home from "../components/layout/home";
+import { NotificationProvider } from "../components/common/NotificationContext";
+import SupportRequest from "../components/doctor/supportTicket/SupportRequest";
+import SupportAdminChat from "../components/doctor/supportTicket/SupportChat";
+import SupportChat from "../components/patient/supportTicket/SupportChat";
+import SupportPatientRequest from "../components/patient/supportTicket/SupportRequest";
 
 const routes = [
     {
@@ -44,6 +49,18 @@ const routes = [
         component: <UpdateProfile />
     },
     {
+        path: 'supportRequest',
+        layout: 'doctor',
+        auth: true,
+        component: <SupportRequest />
+    },
+    {
+        path: 'supportChat',
+        layout: 'doctor',
+        auth: true,
+        component: <SupportAdminChat />
+    },
+    {
         path: 'myProfile',
         layout: 'doctor',
         auth: true,
@@ -51,7 +68,7 @@ const routes = [
     },
     {
         path: 'forgotPassword',
-        layout:"doctor",
+        layout: "doctor",
         auth: false,
         component: <ForgotPassword />
     },
@@ -89,7 +106,7 @@ const routes = [
     },
     {
         path: 'forgotPassword',
-        layout:"patient",
+        layout: "patient",
         auth: false,
         component: <ForgotPatientPassword />
     },
@@ -98,6 +115,18 @@ const routes = [
         layout: 'patient',
         auth: true,
         component: <BookAppointment />,
+    },
+    {
+        path: 'supportChat',
+        layout: 'patient',
+        auth: true,
+        component: <SupportChat />
+    },
+    {
+        path: 'supportRequest',
+        layout: 'patient',
+        auth: true,
+        component: < SupportPatientRequest />
     },
 
     // Common Routes
@@ -120,39 +149,41 @@ const routes = [
 
 const RouterPage = () => {
     return (
-        <BrowserRouter>
-            <Routes>
-                {routes.map((route, index) => {
-                    if (route.layout === 'doctor') {
-                        return (
-                            <Route key={index} path="/doctor">
-                                {route.auth ? (
-                                    <Route element={<AuthRoute />} >
+        <NotificationProvider >
+            <BrowserRouter>
+                <Routes>
+                    {routes.map((route, index) => {
+                        if (route.layout === 'doctor') {
+                            return (
+                                <Route key={index} path="/doctor">
+                                    {route.auth ? (
+                                        <Route element={<AuthRoute />} >
+                                            <Route path={route.path} element={route.component} />
+                                        </Route>
+                                    ) : (
                                         <Route path={route.path} element={route.component} />
-                                    </Route>
-                                ) : (
-                                    <Route path={route.path} element={route.component} />
-                                )}
-                            </Route>
-                        );
-                    } else if (route.layout === 'patient') {
-                        return (
-                            <Route key={index} path="/patient">
-                                {route.auth ? (
-                                    <Route element={<AuthRoute />}>
+                                    )}
+                                </Route>
+                            );
+                        } else if (route.layout === 'patient') {
+                            return (
+                                <Route key={index} path="/patient">
+                                    {route.auth ? (
+                                        <Route element={<AuthRoute />}>
+                                            <Route path={route.path} element={route.component} />
+                                        </Route>
+                                    ) : (
                                         <Route path={route.path} element={route.component} />
-                                    </Route>
-                                ) : (
-                                    <Route path={route.path} element={route.component} />
-                                )}
-                            </Route>
-                        );
-                    } else {
-                        return <Route key={index} path={route.path} element={route.component} />;
-                    }
-                })}
-            </Routes>
-        </BrowserRouter >
+                                    )}
+                                </Route>
+                            );
+                        } else {
+                            return <Route key={index} path={route.path} element={route.component} />;
+                        }
+                    })}
+                </Routes>
+            </BrowserRouter >
+        </NotificationProvider>
     );
 };
 

@@ -12,37 +12,32 @@ const Appointments = () => {
 
     useEffect(() => {
         fetchAppointments();
+        
     }, [filter]);
 
     const fetchAppointments = async () => {
-        return new Promise((resolve, reject) => {
-            get(`/getAppointment`, { params: filter })
-                .then((response) => {
-                    setAppointments(response.data.allAppointments || []);
-                    resolve(response);
-                })
-                .catch((error) => {
-                    console.error('Error fetching appointments:', error);
-                    toastMessage('error', Object.values(error.response.data).toString());
-                });
-        });
+        get(`/getAppointment`, { params: filter })
+            .then((response) => {
+                setAppointments(response.allAppointments || []);
+            })
+            .catch((error) => {
+                console.error('Error fetching appointments:', error);
+                toastMessage('error', Object.values(error.response.data).toString());
+            });
     };
 
     const handleAppointmentAction = async (action, appointmentId) => {
         const url = action === 1
             ? `/approveAppointment?id=${appointmentId}`
             : `/rejectAppointment?id=${appointmentId}`;
-        return new Promise((resolve, reject) => {
-            post(url)
-                .then((response) => {
-                    toastMessage('success',`Appointment ${action === 1 ? 'Approved' : 'Rejected'} Successfully.`);
-                    resolve(response);
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
-                    toastMessage('error', Object.values(error.response.data).toString());
-                })
-        });
+        post(url)
+            .then((response) => {
+                toastMessage('success', `Appointment ${action === 1 ? 'Approved' : 'Rejected'} Successfully.`);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                toastMessage('error', Object.values(error.response.data).toString());
+            })
     };
 
     return (
