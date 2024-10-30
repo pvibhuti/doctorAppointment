@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const verifyToken = require('../middlewares/authToken.js');
+const verifyToken = require('../Utils/middlewares/authToken.js');
 const { upload } = require('../Utils/CommonUtils.js');
-const decryptionProcess = require('../middlewares/decryption.js');
+const decryptionProcess = require('../Utils/middlewares/decryption.js');
 const { validateAppointmentInput } = require('../appointment/model/appointmentValidation.js');
 const { bookAppointment, upcomingAppointment, getAppointment, deleteAppointment,remainAppointment, approveAppointment, editAppointment, allcountAppointment, getAppointmentForPatient, rejectAppointment } = require("../appointment/model/appointmentController.js");
 

@@ -1,4 +1,4 @@
-const { decryptedDataResponse } = require("../Utils/decryptData");
+const { decryptedDataResponse } = require("../decryptData");
 
 const decryptionProcess = async (req, res, next) => {
     try {

@@ -56,6 +56,19 @@ const createServer = (app) => {
             }
         });
 
+        socket.on("delete_message", async ({ messageId }) => {
+            io.emit("message_deleted", { messageId });
+
+        });
+
+        socket.on("edit_message", async (messageId, newText) => {
+            io.emit("edit_message", { messageId, newText });
+        });
+
+        socket.on("delete_message_for_Everyone", async ({ messageId }) => {
+            io.emit('message_deleted_for_everyone', { messageId });
+        });
+
         socket.on('disconnect', () => {
             console.log('A user disconnected');
         });

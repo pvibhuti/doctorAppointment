@@ -358,11 +358,19 @@ const getMessagesByTicket = async (req, res, next) => {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
-        const id = req.body.id || req.query.id || req.params.id;
+        const { id, userType } = req.query || req.params;
 
-        const messages = await supportChatMessage.find({ applyTicketId: id });
+        if (!id || !userType) {
+            return sendError(req, res, { message: "Ticket ID and user type are required." });
+        }
 
-        return sendSuccess(req, res, { message: "All Message here.", messages });
+        const messages = await supportChatMessage.find({
+            applyTicketId: id,
+            deletedBy: { $ne: userType },
+            status: 0
+        });
+
+        return sendSuccess(req, res, { message: "All messages here.", messages });
     } catch (error) {
         console.error('Error :', error);
         return sendError(req, res, {
@@ -371,6 +379,93 @@ const getMessagesByTicket = async (req, res, next) => {
         }, 500);
     }
 }
+
+const deleteMessage = async (req, res, next) => {
+    try {
+        const { id, userType } = req.query || req.params;
+
+        if (!id || !userType) {
+            return sendError(req, res, { message: "Message ID and user type are required." });
+        }
+
+        const messageData = await supportChatMessage.findOne({ _id: id });
+        if (!messageData) {
+            return sendError(req, res, { message: "Message data not found." }, 404);
+        }
+
+        const updatedMessage = await supportChatMessage.findByIdAndUpdate(
+            id,
+            { $push: { deletedBy: userType } },
+            { new: true }
+        );
+
+        return sendSuccess(req, res, { message: "Message Delete Successfully." });
+
+    } catch (error) {
+        console.error('Error :', error);
+        return sendError(req, res, {
+            message: "An Server Error.",
+            error: error.message,
+        }, 500);
+    }
+}
+
+const deleteforEveryOne = async (req, res, next) => {
+    try {
+
+        const { id } = req.query || req.params;
+
+        if (!id) {
+            return sendError(req, res, { message: "Message ID is required." });
+        }
+
+        const messageData = await supportChatMessage.findOne({ _id: id });
+        if (!messageData) {
+            return sendError(req, res, { message: "Message data not found." }, 404);
+        }
+
+        const updatedMessage = await supportChatMessage.findByIdAndUpdate(
+            id,
+            { status: 1 },
+            { new: true }
+        );
+        console.log("update message ", updatedMessage);
+
+
+        return sendSuccess(req, res, { message: "Message Delete for Every one Successfully." });
+
+    } catch (error) {
+        console.error('Error :', error);
+        return sendError(req, res, {
+            message: "An Server Error.",
+            error: error.message,
+        }, 500);
+    }
+}
+
+const editMessage = async (req, res, next) => {
+    try {
+        const { id, text } = req.query || req.params;
+
+        if (!id || !text) {
+            return sendError(req, res, { message: "Message ID and new text are required." });
+        }
+
+        const updatedMessage = await supportChatMessage.findByIdAndUpdate(
+            id,
+            { message: text },
+            { new: true }
+        );
+
+        return sendSuccess(req, res, { message: "Message updated successfully.", data: updatedMessage });
+    } catch (error) {
+        console.error('Error:', error);
+        return sendError(req, res, {
+            message: "An error occurred while editing the message.",
+            error: error.message,
+        }, 500);
+    }
+};
 
 module.exports = {
     createSupportTicket,
@@ -383,4 +478,7 @@ module.exports = {
     getSelectedApplyTicket,
     getPatientTicket,
     getMessagesByTicket,
+    deleteMessage,
+    deleteforEveryOne,
+    editMessage
 }

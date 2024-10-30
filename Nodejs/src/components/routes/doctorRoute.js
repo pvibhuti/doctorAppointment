@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const verifyToken = require('../middlewares/authToken.js');
+const verifyToken = require('../Utils/middlewares/authToken.js');
 const { upload } = require('../Utils/CommonUtils.js');
-const decryptionProcess = require('../middlewares/decryption.js');
+const decryptionProcess = require('../Utils/middlewares/decryption.js');
 const { validateDoctorInput } = require('../doctor/model/doctorValidation.js');
 const { registerDoctor, loginDoctor, login, uploadDocuments, updateProfilePhoto, getDoctorData, changesPassword, sendOTPForgotPassword, forgotPassword , editDoctorDetails, getDoctors} = require("../doctor/model/doctorController.js");
 

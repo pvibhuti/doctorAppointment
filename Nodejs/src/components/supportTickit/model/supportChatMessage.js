@@ -2,36 +2,40 @@ const { default: mongoose } = require('mongoose');
 const { Schema } = require('mongoose');
 
 const supportChatSchema = new Schema({
-    applyTicketId : {
+    applyTicketId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref :'ApplyTicket',
-        require:true
+        ref: 'ApplyTicket',
+        require: true
     },
-    senderId:{
-        type:mongoose.Schema.Types.ObjectId,
-        require:true
+    senderId: {
+        type: mongoose.Schema.Types.ObjectId,
+        require: true
     },
-    receiverId:{
-        type:mongoose.Schema.Types.ObjectId,
-        require:true
+    receiverId: {
+        type: mongoose.Schema.Types.ObjectId,
+        require: true
     },
-    type:{
-        type:Number,
-        default:0,
+    type: {
+        type: Number,
+        default: 0,
     },
-    message:{
-        type:String,
-        require:true
+    message: {
+        type: String,
+        require: true
     },
-    status:{
-        type:Number,
-        default:0
+    status: {
+        type: Number,
+        default: 0
     },
-    image:{
-        type:[String]
+    image: {
+        type: [String]
+    },
+    deletedBy: {
+        type: [Number],
+        default: []
     }
-},{
-    timestamps:true
+}, {
+    timestamps: true
 })
 
 const supportChatMessage = mongoose.model('SupportChatMessage', supportChatSchema);

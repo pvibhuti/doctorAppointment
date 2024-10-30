@@ -1,8 +1,8 @@
-const { sendError } = require("../Utils/CommonUtils.js");
+const { sendError } = require("../CommonUtils.js");
 const jwt = require('jsonwebtoken')
 const config = require('config');
 const jwtSecret = config.get('JWTSECRET');
-const client = require("../Utils/redisClient.js");
+const client = require("../redisClient.js");
 
 const verifyToken = async (req, res, next) => {
     try {
