@@ -9,6 +9,7 @@ import { ActionCreators } from '../../store/action/action.js';
 import { fetchData } from '../common/handleMethods.jsx';
 import ApplyTicket from './supportTicket/ApplyTickets.jsx';
 import SupportChat from './supportTicket/SupportChat.jsx';
+import SupportRequest from './supportTicket/SupportRequest.jsx';
 
 
 const PatientDashboard = () => {
@@ -58,13 +59,15 @@ const PatientDashboard = () => {
                     >
                         Support Tickets
                     </a>
+                    <Link to="/patient/supportRequest"  >
                     <a
-                        href="#"
+                        href="/patient/supportRequest"
                         className="block py-2 px-4 hover:bg-gray-700"
-                        onClick={() => setActiveSection('supportChat')}
+                        // onClick={() => setActiveSection('supportChat')}
                     >
-                        Support Chat
+                        Support Requests
                     </a>
+                    </Link>
                     {/* <Link to="/patient/supportChat" className="block py-2 px-4 hover:bg-gray-700">Support Chat</Link> */}
                     <Link to="/patient/myProfile" className="block py-2 px-4 hover:bg-gray-700">My Profile</Link>
                     <Link to="/patient/bookAppointment" className="block py-2 px-4 hover:bg-gray-700">Book Appointments</Link>
@@ -188,9 +191,10 @@ const PatientDashboard = () => {
                <ApplyTicket />
             )}
             
-            {activeSection === 'supportChat' && (
-               <SupportChat />
-            )}
+            {/* {activeSection === 'supportChat' && (
+            //    <SupportChat />
+               <SupportRequest />
+            )} */}
         </div>
     );
 };

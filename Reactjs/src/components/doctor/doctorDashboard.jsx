@@ -75,13 +75,15 @@ const DoctorDashboard = () => {
           >
             Dashboard
           </a>
-          <a
-            href="#/supportRequest"
-            className="block py-2 px-4 hover:bg-gray-700"
-            onClick={() => setActiveSection('supportTickets')}
-          >
-            Support Request
-          </a>
+          <Link to="/doctor/supportRequest" >
+            <a
+              href="/doctor/supportRequest"
+              className="block py-2 px-4 hover:bg-gray-700"
+              // onClick={() => setActiveSection('supportRequest')}
+            >
+              Support Request
+            </a>
+          </Link>
           <Link to="/doctor/appointments" ><a href="/doctor/appointments" className="block py-2 px-4 hover:bg-gray-700"> Appointments</a> </Link>
           <Link to="/doctor/myProfile" > <a href="/doctor/myProfile" className="block py-2 px-4 hover:bg-gray-700"> My Profile </a> </Link>
           <Link to="/doctor/changePassword" > <a href="/doctor/changePassword" className="block py-2 px-4 hover:bg-gray-700"> Change Password </a> </Link>
@@ -192,9 +194,9 @@ const DoctorDashboard = () => {
           </>
         )}
 
-        {activeSection === 'supportTickets' && (
+        {/* {activeSection === 'supportTickets' && (
           <SupportRequest />
-        )}
+        )} */}
 
       </div>
       <ToastContainer />

@@ -2,41 +2,33 @@ import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { io } from 'socket.io-client';
 import { useSelector } from 'react-redux';
 import { FaImage, FaTimes } from 'react-icons/fa';
-import Modal from 'react-modal';
 import { API_URL } from '../../../services/config';
-import { fetchData } from '../../common/handleMethods';
 import { toastMessage } from '../../helpers/Toast';
-import { post } from '../../../security/axios';
-
+import { get, patch, post } from '../../../security/axios';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { IoIosArrowDropleftCircle } from "react-icons/io";
 
 const socket = io(API_URL);
 
 const SupportChat = () => {
     const [message, setMessage] = useState([]);
     const [messageInput, setMessageInput] = useState("");
-    const [selectedTicket, setSelectedTicket] = useState([]);
-    const [activeTicket, setActiveTicket] = useState(null);
-    const [applyTickets, setApplyTicket] = useState(null);
-    const userId = useSelector((state) => state.patientProfile?._id);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
     const [isChatDisabled, setIsChatDisabled] = useState(false);
     const [imagePreview, setImagePreview] = useState(null);
+    const [contextMenu, setContextMenu] = useState(null);
+    const userId = useSelector((state) => state.patientProfile?._id);
+    const nevigate = useNavigate();
+    const location = useLocation();
+    const applySelectedTicket = location.state;
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
-        fetchData('/getPatientTicket', (data) => {
-            console.log("Data", data);
-
-            if (Array.isArray(data.selectedTicket)) {
-                console.log("Selected Ticket Id", data.selectedTicket);
-                setSelectedTicket(data.selectedTicket);
-            }
-        });
+        fetchMessages(applySelectedTicket);
 
         const shouldDisplayMessage = (msg) =>
-            msg.senderId !== userId;
-        // msg.applyTicketId === applyTickets && 
+            msg.applyTicketId === applySelectedTicket._id && msg.senderId !== userId
 
         socket.on('receive_message', (data) => {
             if (shouldDisplayMessage(data.message)) {
@@ -44,103 +36,88 @@ const SupportChat = () => {
             }
         });
 
+        socket.on("message_deleted", ({ messageId }) => {
+            setMessage((prevMessages) =>
+                prevMessages.filter((message) => message._id !== messageId)
+            );
+        });
+
+        socket.on("message_deleted_for_everyone", ({ messageId }) => {
+            setMessage(prevMessages =>
+                prevMessages.filter(msg => msg._id !== messageId)
+            );
+        });
 
         return () => {
             socket.off('receive_message');
+            socket.off("message_deleted");
+            socket.off("message_deleted_for_everyone");
         };
-    }, [selectedTicket._id]);
+    }, [applySelectedTicket._id]);
 
-    const handleSelectTicket = async (ticket) => {
-        setActiveTicket(ticket.applyTicket);
-        setMessage([]);
-
-        fetchData(`/getMessagesByTicket?id=${ticket.applyTicket._id}`, (response) => {
-            setMessage(response.messages);
-        });
-    };
-
-    const sendMessage = async () => {
-        if (!isChatDisabled && (messageInput.trim() || selectedImage)) {
-            const messageData = {
-                senderId: userId,
-                applyTicketId: activeTicket._id,
-                receiverId: activeTicket.suppotTicketId.adminId,
-                type: 2,
-                message: messageInput.trim(),
-            };
-
-            let uploadedImageName = null;
-            if (selectedImage) {
-                uploadedImageName = await uploadImage();
-            }
-
-            const textMessage = { ...messageData, image: null };
-            socket.emit('send_message', { messageData: textMessage });
-
-            if (uploadedImageName) {
-
-                const imageMessage = {
-                    ...messageData,
-                    message: null,
-                    image: uploadedImageName,
-                };
-
-                socket.emit('send_message', { messageData: imageMessage });
-                setMessage((prevMessages) => [
-                    ...prevMessages,
-                    { ...imageMessage, senderId: userId, createdAt: new Date() },
-                ]);
-                setMessageInput("");
-            }
-
-            setMessage((prevMessages) => [
-                ...prevMessages,
-                { ...textMessage, senderId: userId, createdAt: new Date() },
-            ]);
-            setMessageInput("");
-            setSelectedImage(null);
-            setImagePreview(null);
-        }
-    };
-
-    const renderMessages = () => {
-        return message.map((msg, index) => {
-            const isPatient = msg.senderId === userId;
-
-            const messageTime = new Date(msg.createdAt).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true,
-            });
-
-            return (
-                <div key={index} className={`mb-2 ${isPatient ? 'text-right' : 'text-left'}`}>
-                    <div className={`inline-block p-2 rounded ${isPatient ? 'bg-blue-200 text-black' : 'bg-gray-300'}`}>
-                        {msg.message ? (
-                            <div className='flex flex-cols'>
-                                {msg.message}
-                                <div className="text-xs text-gray-500 mt-1 ml-2">{messageTime}</div>
-                            </div>
-                        ) : (
-                            <>
-                                <img
-                                    src={`${API_URL}/uploads/${msg.image}`}
-                                    alt="Sent Image"
-                                    className="w-32 h-32 object-cover"
-                                    onClick={() => openImageModal(`${API_URL}/uploads/${msg.image}`)}
-                                />
-                                <div className="text-xs text-gray-500 mt-1">{messageTime}</div>
-                            </>
-                        )}
-                    </div>
-                </div>
-            );
-        });
-    };
 
     useLayoutEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [message]);
+
+    const fetchMessages = async (ticket) => {
+        get(`/getMessagesByTicket?id=${ticket._id}&userType=${2}`)
+            .then((response) => {
+                setMessage(response.messages);
+            })
+            .catch((error) => {
+                console.error('Error fetching message info:', error);
+            })
+    };
+
+    const editMessage = (messageId, newText) => {
+        patch(`/editMessage?id=${messageId}&text=${newText}`)
+            .then((response) => {
+                console.log("response", response);
+                toastMessage('success', 'Message Edited Successfully.');
+                handleClose();
+                setMessage(prevMessages =>
+                    prevMessages.map(msg =>
+                        msg._id === messageId ? { ...msg, message: newText } : msg
+                    )
+                );
+            })
+            .catch((error) => {
+                console.log("error", error);
+                toastMessage('error', error.response?.data?.message);
+            });
+
+        socket.emit("edit_message", { messageId, newText });
+    };
+
+    const deleteMessage = (messageId) => {
+        const userType = 2;
+        post(`/deleteMessage?id=${messageId}&userType=${userType}`)
+            .then((response) => {
+                console.log("response", response);
+                toastMessage('success', 'Message Deleted Successfully.');
+                handleClose();
+            })
+            .catch((error) => {
+                console.log("error", error);
+                toastMessage('error', error.response?.data?.message);
+            });
+
+        socket.emit("delete_message", { messageId });
+    };
+
+    const deleteMessageforEveryone = (messageId) => {
+        post(`/deleteforEveryOne?id=${messageId}`, { id: messageId })
+            .then(response => {
+                toastMessage('success', 'Message deleted for everyone.');
+                handleClose();
+            })
+            .catch(error => {
+                toastMessage('error', error.response?.data?.message);
+            });
+
+        socket.emit('delete_message_for_Everyone', { messageId });
+    };
 
     const uploadImage = async () => {
         if (!selectedImage) return null;
@@ -161,6 +138,16 @@ const SupportChat = () => {
         }
     };
 
+    const openImageModal = (image) => {
+        setSelectedImage(image);
+        setIsImageModalOpen(true);
+    };
+
+    const closeImageModal = () => {
+        setSelectedImage(null);
+        setIsImageModalOpen(false);
+    };
+
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -177,54 +164,181 @@ const SupportChat = () => {
         setImagePreview(null);
     };
 
-    const openImageModal = (image) => {
-        setSelectedImage(image);
-        setIsImageModalOpen(true);
+    const handleBackToRequests = () => {
+        nevigate("/patient/supportRequest")
     };
 
-    const closeImageModal = () => {
-        setSelectedImage(null);
-        setIsImageModalOpen(false);
+    const handleRightClick = (event, msg) => {
+        event.preventDefault();
+        setContextMenu({
+            mouseX: event.clientX - 2,
+            mouseY: event.clientY - 4,
+            messageId: msg._id,
+            messageText: msg.message,
+        });
+    };
+
+    const handleClose = () => {
+        setContextMenu(null);
+    };
+
+    const sendMessage = async () => {
+        if (!isChatDisabled && (messageInput.trim() || selectedImage)) {
+            const messageData = {
+                senderId: userId,
+                applyTicketId: applySelectedTicket._id,
+                receiverId: applySelectedTicket.suppotTicketId.adminId,
+                type: 2,
+                message: messageInput.trim(),
+            };
+
+            let uploadedImageName = null;
+
+            if (selectedImage) {
+                uploadedImageName = await uploadImage();
+            }
+
+            if (messageInput.trim()) {
+                const textMessage = { ...messageData, image: null };
+                socket.emit('send_message', { messageData: textMessage });
+
+                setMessage((prevMessages) => [
+                    ...prevMessages,
+                    { ...textMessage, senderId: userId, createdAt: new Date() },
+                ]);
+            }
+
+            if (uploadedImageName) {
+                const imageMessage = {
+                    ...messageData,
+                    message: null,
+                    image: uploadedImageName,
+                };
+
+                socket.emit('send_message', { messageData: imageMessage });
+
+                setMessage((prevMessages) => [
+                    ...prevMessages,
+                    { ...imageMessage, senderId: userId, createdAt: new Date() },
+                ]);
+            }
+
+            setMessageInput("");
+            setSelectedImage(null);
+            setImagePreview(null);
+        }
+    };
+
+    const renderMessages = () => {
+        return message.map((msg, index) => {
+            const isPatient = msg.senderId === userId;
+            const isSender = msg.senderId === userId;
+
+            const messageTime = new Date(msg.createdAt).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+            });
+
+            return (
+                <div key={index} className={`mb-2 ${isPatient ? 'text-right' : 'text-left'}`}>
+                    <div
+                        onContextMenu={(e) => handleRightClick(e, msg)}
+                        className={`inline-block p-2 rounded ${isPatient ? 'bg-blue-200 text-black' : 'bg-gray-300'}`}
+                    >
+                        {msg.message ? (
+                            <div className='flex flex-cols'>
+                                {msg.message}
+                                <div className="text-xs text-gray-500 mt-1 ml-2">{messageTime}</div>
+                            </div>
+                        ) : (
+                            <>
+                                <img
+                                    src={`${API_URL}/uploads/${msg.image}`}
+                                    alt="Sent Image"
+                                    className="w-32 h-32 object-cover"
+                                    onClick={() => openImageModal(`${API_URL}/uploads/${msg.image}`)}
+                                />
+                                <div className="text-xs text-gray-500 mt-1">{messageTime}</div>
+                            </>
+                        )}
+                    </div>
+                    {contextMenu && contextMenu.messageId === msg._id && (
+                        <div
+                            style={{
+                                position: "absolute",
+                                top: contextMenu.mouseY,
+                                left: contextMenu.mouseX,
+                                backgroundColor: "white",
+                                boxShadow: "0px 0px 10px rgba(0,0,0,0.2)",
+                                padding: "5px",
+                                zIndex: 10,
+                                borderRadius: "8px",
+                            }}
+                            onClick={handleClose}
+                        >
+                            <div className="text-left space-y-2">
+
+                                <div className="flex items-center space-x-2 cursor-pointer" onClick={() => deleteMessage(msg._id)}>
+                                    <span>🗑️</span>
+                                    <button className="hover:font-bold text-red-600">Delete</button>
+                                </div>
+
+                                {isSender && (
+                                    <>
+                                        <div className="flex items-center space-x-2 cursor-pointer" onClick={() => editMessage(msg._id, prompt("Edit your message:", msg.message))}>
+                                            <span>✏️</span>
+                                            <button className="hover:font-bold text-blue-600">Edit Message</button>
+                                        </div>
+                                        <div className="flex items-center space-x-2 cursor-pointer" onClick={() => deleteMessageforEveryone(msg._id)}>
+                                            <span>🚫</span>
+                                            <button className="hover:font-bold text-purple-600">Delete for Everyone</button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        });
     };
 
     return (
         <div className="container mx-auto mt-5">
-            <div className="flex justify-between items-center py-2 px-6 bg-blue-600 text-white rounded-t-lg">
+            <div className="flex justify-between items-center py-2 px-6 bg-blue-600 text-white rounded-t-lg mb-4">
+                <IoIosArrowDropleftCircle onClick={handleBackToRequests} className="text-4xl text-white font-semibold cursor-pointer" > Back </IoIosArrowDropleftCircle>
                 <h2 className="text-2xl font-semibold">Support Ticket Details</h2>
                 <div className="h-9 w-9 bg-yellow-500 flex items-center justify-center rounded-full text-white">VP</div>
             </div>
             <div className="flex flex-row">
                 {/* Ticket List Section */}
                 <div className="w-1/4 bg-white p-5 border-r">
-                    <h3 className="text-xl font-semibold mb-4">Your Tickets</h3>
-                    <div className="overflow-y-auto h-[600px]">
-                        {selectedTicket.length > 0 ? (
-                            selectedTicket.map((applyTicket, index) => (
-                                <div key={index} className="flex justify-between items-center p-3 border-b cursor-pointer hover:bg-gray-100">
-                                    <div>
-                                        <div className="font-semibold">{applyTicket.userId.fullName}</div>
-                                        <div className="text-sm text-gray-500"><strong>User Message:</strong> {applyTicket.message}</div>
-                                        <div className="text-sm text-gray-500"><strong>Support TicketTitle:</strong> {applyTicket.suppotTicketId.subject}</div>
-                                        {applyTicket.status === 1 ? (
-                                            <p className="text-green-600 font-bold mt-2">This ticket is approved.</p>
-                                        ) : applyTicket.status === 2 ? (
-                                            <p className="text-red-600 font-bold mt-2">This ticket is rejected.</p>
-                                        ) : (
-                                            applyTicket.status === 0 && (
-                                                <p className="text-red-600 font-bold mt-2"></p>
-                                            )
-                                        )}
+                    <div className="bg-white p-4 h-[400px] overflow-y-auto border">
+                        {applySelectedTicket ? (
+                            <div>
+                                <div className="font-semibold mt-2 p-1">{applySelectedTicket.userId.fullName}</div>
+                                <div className="text-sm text-gray-500 mt-2"><strong>User Message:</strong> {applySelectedTicket.message}</div>
+                                <div className="text-sm text-gray-500 mt-2"><strong>Support TicketTitle:</strong> {applySelectedTicket.suppotTicketId.subject}</div>
+                                {applySelectedTicket.status === 1 ? (
+                                    <div className='mt-2 p-1'>
+                                        <p className="text-green-600 font-bold mt-2">This ticket is approved.</p>
+                                        <p className="text-sm text-gray-500 font-bold mt-2"><strong> Approve Reason : </strong>{applySelectedTicket.reason}</p>
                                     </div>
-                                    <button
-                                        onClick={() => handleSelectTicket({
-                                            applyTicket
-                                        })}
-                                        className="bg-blue-500 text-white px-2 py-1 rounded mr-2"
-                                    >
-                                        Chat
-                                    </button>
-                                </div>
-                            ))
+
+                                ) : applySelectedTicket.status === 2 ? (
+                                    <div className='mt-2 p-1'>
+                                        <p className="text-red-600 font-bold mt-2">This ticket is rejected.</p>
+                                        <p className="text-sm text-gray-500 font-bold mt-2"><strong> Rejected Reason : </strong>{applySelectedTicket.reason}</p>
+                                    </div>
+                                ) : (
+                                    applySelectedTicket.status === 0 && (
+                                        <div className='mt-2 p-1'>
+                                            <p className="text-red-600 font-bold mt-2"></p>
+                                        </div>
+                                    )
+                                )}
+                            </div>
                         ) : (
                             <p>No tickets available</p>
                         )}
@@ -233,15 +347,25 @@ const SupportChat = () => {
 
                 {/* Chat Section */}
                 <>
-                    {activeTicket ? (
+                    {applySelectedTicket ? (
                         <div className="w-3/4 p-2">
                             <div className="overflow-y-auto h-[500px] border p-2 rounded mb-4">
-                                <h3 className="text-xl font-semibold mb-4 text-center">{activeTicket.message}</h3>
+                                <h3 className="text-xl font-semibold mb-4 text-center" style={{
+                                    position: "sticky",
+                                    top: 0,
+                                    zIndex: 1,
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    padding: "2px",
+                                    margin: "2px",
+                                }}
+                                >{applySelectedTicket.message}</h3>
                                 <div>{renderMessages()}</div>
                                 <div ref={messagesEndRef} />
                             </div>
 
-                            {activeTicket.status === 0 && (
+                            {applySelectedTicket.status === 0 && (
                                 <div className="mt-4">
                                     {/* Image Preview Section */}
                                     {imagePreview && (
@@ -279,8 +403,6 @@ const SupportChat = () => {
                                             id="image-upload"
                                             style={{ display: 'none' }}
                                             onChange={handleImageChange}
-
-
                                         />
 
                                         <label htmlFor="image-upload" className="cursor-pointer mx-2">
@@ -289,7 +411,9 @@ const SupportChat = () => {
 
                                         <button
                                             onClick={sendMessage}
-                                            className="bg-blue-500 text-white px-4 py-2 rounded-md"
+                                            className={`bg-blue-500 text-white px-4 py-2 ml-2 rounded ${(!message && !selectedImage) ? 'opacity-50 cursor-not-allowed' : ''
+                                                }`}
+                                            disabled={!message && !selectedImage}
                                         >
                                             Send
                                         </button>
