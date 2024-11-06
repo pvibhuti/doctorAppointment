@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
-import { io } from 'socket.io-client';
+// import { io } from 'socket.io-client';
 import { useSelector } from 'react-redux';
 import { FaImage, FaTimes } from 'react-icons/fa';
 import { API_URL } from '../../../services/config';
@@ -7,8 +7,9 @@ import { toastMessage } from '../../helpers/Toast';
 import { get, patch, post } from '../../../security/axios';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { IoIosArrowDropleftCircle } from "react-icons/io";
-
-const socket = io(API_URL);
+import socket from '../../../constants/socket';
+import { FaRegCopy } from "react-icons/fa";
+import { MdDelete } from "react-icons/md";
 
 const SupportChat = () => {
     const [message, setMessage] = useState([]);
@@ -23,6 +24,9 @@ const SupportChat = () => {
     const location = useLocation();
     const applySelectedTicket = location.state;
     const messagesEndRef = useRef(null);
+
+    const [selectedMessages, setSelectedMessages] = useState([]);
+    const [selectionMode, setSelectionMode] = useState(false);
 
     useEffect(() => {
         fetchMessages(applySelectedTicket);
@@ -61,7 +65,7 @@ const SupportChat = () => {
     }, [message]);
 
     const fetchMessages = async (ticket) => {
-        get(`/getMessagesByTicket?id=${ticket._id}&userType=${2}`)
+        get(`/getMessagesByTicket?id=${ticket._id}`)
             .then((response) => {
                 setMessage(response.messages);
             })
@@ -91,8 +95,7 @@ const SupportChat = () => {
     };
 
     const deleteMessage = (messageId) => {
-        const userType = 2;
-        post(`/deleteMessage?id=${messageId}&userType=${userType}`)
+        post(`/deleteMessages`, { id: messageId })
             .then((response) => {
                 console.log("response", response);
                 toastMessage('success', 'Message Deleted Successfully.');
@@ -182,6 +185,58 @@ const SupportChat = () => {
         setContextMenu(null);
     };
 
+    const toggleSelectMessage = (messageId) => {
+        setSelectedMessages((prevSelected) => {
+            const newSelected = prevSelected.includes(messageId)
+                ? prevSelected.filter((id) => id !== messageId)
+                : [...prevSelected, messageId];
+
+            if (newSelected.length === 0) {
+                setSelectionMode(false);
+            }
+            return newSelected;
+        });
+    };
+
+    const cancelSelection = () => {
+        setSelectionMode(false);
+        setSelectedMessages([]);
+    };
+
+    const deleteSelectedMessages = () => {
+        if (selectedMessages.length === 0) return;
+
+        post(`/deleteMessages`, { id: selectedMessages, userType: 1 })
+            .then((response) => {
+                console.log("response", response);
+                toastMessage('success', 'Selected Messages Deleted Successfully.');
+                handleClose();
+
+                setMessage((prevMessages) =>
+                    prevMessages.filter((msg) => !selectedMessages.includes(msg._id))
+                );
+
+                socket.emit("delete_message", { messageId: selectedMessages });
+
+                cancelSelection();
+            })
+            .catch((error) => {
+                console.log("error", error);
+                toastMessage('error', error.response?.data?.message || "Error deleting messages");
+            });
+    };
+
+    const handleKeyPress = (e) => {
+
+        if (e.key === 'Enter' && (e.ctrlKey || e.shiftKey)) {
+            e.preventDefault();
+            setMessageInput((prevInput) => prevInput + '\n');
+        } else if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    };
+
     const sendMessage = async () => {
         if (!isChatDisabled && (messageInput.trim() || selectedImage)) {
             const messageData = {
@@ -240,72 +295,99 @@ const SupportChat = () => {
                 hour12: true,
             });
 
+            const isSelected = selectedMessages.includes(msg._id);
+
             return (
-                <div key={index} className={`mb-2 ${isPatient ? 'text-right' : 'text-left'}`}>
-                    <div
-                        onContextMenu={(e) => handleRightClick(e, msg)}
-                        className={`inline-block p-2 rounded ${isPatient ? 'bg-blue-200 text-black' : 'bg-gray-300'}`}
-                    >
-                        {msg.message ? (
-                            <div className='flex flex-cols'>
-                                {msg.message}
-                                <div className="text-xs text-gray-500 mt-1 ml-2">{messageTime}</div>
+                <div>
+                    <div key={index} className={`mb-2 ${isPatient ? 'text-right' : 'text-left'}`}>
+                        {selectionMode && (
+                            <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectMessage(msg._id)}
+                                className="mr-2"
+                            />
+                        )}
+                        <div
+                            onContextMenu={(e) => handleRightClick(e, msg)}
+                            onClick={() => setSelectionMode(true)}
+                            className={`inline-block p-2 rounded ${isPatient ? 'bg-blue-200 text-black' : 'bg-gray-300'
+                                } ${isSelected ? 'border border-blue-500' : ''}`}
+                            style={{
+                                maxWidth: "75%",
+                                borderRadius: "12px",
+                                padding: "8px 12px",
+                                position: "relative",
+                            }}
+                        >
+                            {msg.message ? (
+                                <div>
+                                    <div className='flex flex-cols text-left'>
+                                        <span dangerouslySetInnerHTML={{ __html: msg.message.replace(/\n/g, '<br />') }}></span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <img
+                                        src={`${API_URL}/uploads/${msg.image}`}
+                                        alt="Sent Image"
+                                        className="w-32 h-32 object-cover"
+                                        onClick={() => openImageModal(`${API_URL}/uploads/${msg.image}`)}
+                                    />
+                                </>
+                            )}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1 mb-5 ml-1 mr-1">{messageTime}</div>
+                        {contextMenu && contextMenu.messageId === msg._id && (
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    top: contextMenu.mouseY,
+                                    left: contextMenu.mouseX,
+                                    backgroundColor: "white",
+                                    boxShadow: "0px 0px 10px rgba(0,0,0,0.2)",
+                                    padding: "3px",
+                                    zIndex: 10,
+                                    borderRadius: "8px",
+                                }}
+                                onClick={handleClose}
+                            >
+                                <div className="text-left space-y-2">
+
+                                    <div className="flex items-center space-x-2 cursor-pointer" onClick={() => deleteMessage(msg._id)}>
+                                        <span><MdDelete /></span>
+                                        <button className="hover:font-bold text-red-600">Delete</button>
+                                    </div>
+
+                                    {isSender && (
+                                        <>
+                                            <div className="flex items-center space-x-2 cursor-pointer" onClick={() => editMessage(msg._id, prompt("Edit your message:", msg.message))}>
+                                                <span>✏️</span>
+                                                <button className="hover:font-bold text-blue-600">Edit Message</button>
+                                            </div>
+                                            <div className="flex items-center space-x-2 cursor-pointer" onClick={() => deleteMessageforEveryone(msg._id)}>
+                                                <span>🚫</span>
+                                                <button className="hover:font-bold text-purple-600">Delete for Everyone</button>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div className="flex items-center space-x-2 cursor-pointer" onClick={() => {
+                                        navigator.clipboard.writeText(msg.message);
+                                    }} >
+                                        <span><FaRegCopy /> </span>
+                                        <button className="hover:font-bold text-red-600">Copy</button>
+                                    </div>
+                                </div>
                             </div>
-                        ) : (
-                            <>
-                                <img
-                                    src={`${API_URL}/uploads/${msg.image}`}
-                                    alt="Sent Image"
-                                    className="w-32 h-32 object-cover"
-                                    onClick={() => openImageModal(`${API_URL}/uploads/${msg.image}`)}
-                                />
-                                <div className="text-xs text-gray-500 mt-1">{messageTime}</div>
-                            </>
                         )}
                     </div>
-                    {contextMenu && contextMenu.messageId === msg._id && (
-                        <div
-                            style={{
-                                position: "absolute",
-                                top: contextMenu.mouseY,
-                                left: contextMenu.mouseX,
-                                backgroundColor: "white",
-                                boxShadow: "0px 0px 10px rgba(0,0,0,0.2)",
-                                padding: "5px",
-                                zIndex: 10,
-                                borderRadius: "8px",
-                            }}
-                            onClick={handleClose}
-                        >
-                            <div className="text-left space-y-2">
-
-                                <div className="flex items-center space-x-2 cursor-pointer" onClick={() => deleteMessage(msg._id)}>
-                                    <span>🗑️</span>
-                                    <button className="hover:font-bold text-red-600">Delete</button>
-                                </div>
-
-                                {isSender && (
-                                    <>
-                                        <div className="flex items-center space-x-2 cursor-pointer" onClick={() => editMessage(msg._id, prompt("Edit your message:", msg.message))}>
-                                            <span>✏️</span>
-                                            <button className="hover:font-bold text-blue-600">Edit Message</button>
-                                        </div>
-                                        <div className="flex items-center space-x-2 cursor-pointer" onClick={() => deleteMessageforEveryone(msg._id)}>
-                                            <span>🚫</span>
-                                            <button className="hover:font-bold text-purple-600">Delete for Everyone</button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
                 </div>
             );
         });
     };
 
     return (
-        <div className="container mx-auto mt-5">
+        <div className="container mx-auto mt-5" onClick={handleClose} onScroll={handleClose} >
             <div className="flex justify-between items-center py-2 px-6 bg-blue-600 text-white rounded-t-lg mb-4">
                 <IoIosArrowDropleftCircle onClick={handleBackToRequests} className="text-4xl text-white font-semibold cursor-pointer" > Back </IoIosArrowDropleftCircle>
                 <h2 className="text-2xl font-semibold">Support Ticket Details</h2>
@@ -348,7 +430,7 @@ const SupportChat = () => {
                 {/* Chat Section */}
                 <>
                     {applySelectedTicket ? (
-                        <div className="w-3/4 p-2">
+                        <div className="w-3/4 p-2" onScroll={handleClose}>
                             <div className="overflow-y-auto h-[500px] border p-2 rounded mb-4">
                                 <h3 className="text-xl font-semibold mb-4 text-center" style={{
                                     position: "sticky",
@@ -388,35 +470,56 @@ const SupportChat = () => {
                                     )}
 
                                     <div className="flex items-center">
-                                        <input
-                                            type="text"
-                                            placeholder="Enter your message..."
-                                            value={messageInput}
-                                            onChange={(e) => setMessageInput(e.target.value)}
-                                            className="flex-grow p-2 border rounded-md focus:outline-none"
-                                            disabled={isChatDisabled}
-                                        />
+                                        {selectionMode && selectedMessages.length > 0 ? (
+                                            <button
+                                                onClick={deleteSelectedMessages}
+                                                className="bg-red-500 text-white py-2 px-4 rounded-md transition duration-300 hover:bg-red-600"
+                                            >
+                                                Delete Selected Messages
+                                            </button>
+                                        ) : (
+                                            <div className="flex items-center w-full">
+                                                <textarea
+                                                    type="text"
+                                                    placeholder="Type your message..."
+                                                    value={messageInput}
+                                                    onChange={(e) => setMessageInput(e.target.value)}
+                                                    className="flex-grow p-2 border rounded-md focus:outline-none"
+                                                    disabled={isChatDisabled}
+                                                    onKeyPress={handleKeyPress}
+                                                    rows={1}
+                                                />
 
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            id="image-upload"
-                                            style={{ display: 'none' }}
-                                            onChange={handleImageChange}
-                                        />
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    id="image-upload"
+                                                    style={{ display: 'none' }}
+                                                    onChange={handleImageChange}
+                                                />
 
-                                        <label htmlFor="image-upload" className="cursor-pointer mx-2">
-                                            <FaImage size={24} />
-                                        </label>
+                                                <label htmlFor="image-upload" className="cursor-pointer mx-2">
+                                                    <FaImage size={24} />
+                                                </label>
 
-                                        <button
-                                            onClick={sendMessage}
-                                            className={`bg-blue-500 text-white px-4 py-2 ml-2 rounded ${(!message && !selectedImage) ? 'opacity-50 cursor-not-allowed' : ''
-                                                }`}
-                                            disabled={!message && !selectedImage}
-                                        >
-                                            Send
-                                        </button>
+                                                <button
+                                                    onClick={sendMessage}
+                                                    className={`bg-blue-500 text-white px-4 py-2 ml-2 rounded ${(!message && !selectedImage) ? 'opacity-50 cursor-not-allowed' : ''
+                                                        }`}
+                                                    disabled={!message && !selectedImage}
+                                                >
+                                                    Send
+                                                </button>
+                                            </div>
+                                        )}
+                                        {selectionMode && (
+                                            <button
+                                                onClick={cancelSelection}
+                                                className="text-gray-500 ml-4 hover:underline"
+                                            >
+                                                Cancel
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             )}

@@ -8,6 +8,9 @@ import { toastMessage } from '../../helpers/Toast';
 import { get, patch, post } from '../../../security/axios';
 import { IoIosArrowDropleftCircle } from "react-icons/io";
 import { ToastContainer } from 'react-toastify';
+import { FaRegCopy } from "react-icons/fa";
+import { MdDelete } from "react-icons/md";
+
 const socket = io(API_URL);
 
 const SupportAdminChat = () => {
@@ -29,7 +32,6 @@ const SupportAdminChat = () => {
     const receiverId = selectedTicket.userId;
 
     const [selectedMessages, setSelectedMessages] = useState([]);
-    const [isBulkDeleteMode, setIsBulkDeleteMode] = useState(false);
     const [selectionMode, setSelectionMode] = useState(false);
 
     useEffect(() => {
@@ -66,7 +68,7 @@ const SupportAdminChat = () => {
     }, [messageReceived]);
 
     const fetchMessages = async (ticket) => {
-        get(`/getMessagesByTicket?id=${ticket._id}&userType=${1}`)
+        get(`/getMessagesByTicket?id=${ticket._id}`)
             .then((response) => {
                 setMessageReceived(response.messages);
             })
@@ -96,8 +98,7 @@ const SupportAdminChat = () => {
     };
 
     const deleteMessage = (messageId) => {
-        const userType = 1;
-        post(`/deleteMessage?id=${messageId}&userType=${1}`)
+        post(`/deleteMessages`, { id: messageId })
             .then((response) => {
                 console.log("response", response);
                 toastMessage('success', 'Message Deleted Successfully.');
@@ -163,6 +164,47 @@ const SupportAdminChat = () => {
         }
     };
 
+    const deleteSelectedMessages = () => {
+        if (selectedMessages.length === 0) return;
+
+        post(`/deleteMessages`, { id: selectedMessages, userType: 1 })
+            .then((response) => {
+                console.log("response", response);
+                toastMessage('success', 'Selected Messages Deleted Successfully.');
+                handleClose();
+
+                setMessageReceived((prevMessages) =>
+                    prevMessages.filter((msg) => !selectedMessages.includes(msg._id))
+                );
+
+                socket.emit("delete_message", { messageId: selectedMessages });
+
+                cancelSelection();
+            })
+            .catch((error) => {
+                console.log("error", error);
+                toastMessage('error', error.response?.data?.message || "Error deleting messages");
+            });
+    };
+
+    const toggleSelectMessage = (messageId) => {
+        setSelectedMessages((prevSelected) => {
+            const newSelected = prevSelected.includes(messageId)
+                ? prevSelected.filter((id) => id !== messageId)
+                : [...prevSelected, messageId];
+
+            if (newSelected.length === 0) {
+                setSelectionMode(false);
+            }
+            return newSelected;
+        });
+    };
+
+    const cancelSelection = () => {
+        setSelectionMode(false);
+        setSelectedMessages([]);
+    };
+
     const handleApproveAction = () => {
         setActionType('approve');
         setIsModalOpen(true);
@@ -222,34 +264,14 @@ const SupportAdminChat = () => {
         setContextMenu(null);
     };
 
-    const toggleSelectMessage = (messageId) => {
-        setSelectedMessages((prevSelected) => {
-            const newSelected = prevSelected.includes(messageId)
-                ? prevSelected.filter((id) => id !== messageId)
-                : [...prevSelected, messageId];
-
-            if (newSelected.length === 0) {
-                setSelectionMode(false);
-            }
-
-            return newSelected;
-        });
-    };
-
-    const toggleBulkDeleteMode = () => {
-        setIsBulkDeleteMode((prevMode) => !prevMode);
-        setSelectedMessages([]);
-    };
-
-    const deleteSelectedMessages = () => {
-        selectedMessages.forEach((messageId) => {
-            socket.emit("delete_message", { messageId });
-        });
-
-        setMessageReceived((prevMessages) =>
-            prevMessages.filter((msg) => !selectedMessages.includes(msg._id))
-        );
-        setSelectedMessages([]);
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.shiftKey)) {
+            e.preventDefault();
+            setMessage((prevInput) => prevInput + '\n');
+        } else if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
     };
 
     const sendMessage = async () => {
@@ -312,9 +334,8 @@ const SupportAdminChat = () => {
             const isSelected = selectedMessages.includes(msg._id);
 
             return (
-                <div key={index} className={`mb-2 ${isDoctor ? 'text-right' : 'text-left'}`}>
-                    <div className="flex items-center">
-                        {/* Checkbox for selecting messages */}
+                <div>
+                    <div key={index} className={`mb-2 ${isDoctor ? 'text-right' : 'text-left'}`}>
                         {selectionMode && (
                             <input
                                 type="checkbox"
@@ -325,12 +346,21 @@ const SupportAdminChat = () => {
                         )}
                         <div
                             onContextMenu={(e) => handleRightClick(e, msg)}
-                            className={`inline-block p-2 rounded ${isDoctor ? 'bg-blue-200 text-black' : 'bg-gray-300'}`}
+                            onClick={() => setSelectionMode(true)}
+                            className={`inline-block p-2 rounded-md shadow-md ${isDoctor ? 'bg-blue-200 text-black' : 'bg-gray-300 text-black'
+                                } ${isSelected ? 'border border-blue-500' : ''}`}
+                            style={{
+                                maxWidth: "75%",
+                                borderRadius: "12px",
+                                padding: "8px 12px",
+                                position: "relative",
+                            }}
                         >
                             {msg.message ? (
-                                <div className='flex flex-row'>
-                                    {msg.message}
-                                    <div className="text-xs text-gray-500 mt-1 ml-2">{messageTime}</div>
+                                <div>
+                                    <div className='flex flex-cols text-left'>
+                                        <span dangerouslySetInnerHTML={{ __html: msg.message.replace(/\n/g, '<br />') }}></span>
+                                    </div>
                                 </div>
                             ) : (
                                 <>
@@ -340,10 +370,11 @@ const SupportAdminChat = () => {
                                         className="w-32 h-32 object-cover"
                                         onClick={() => openImageModal(`${API_URL}/uploads/${msg.image}`)}
                                     />
-                                    <div className="text-xs text-gray-500 mt-1">{messageTime}</div>
                                 </>
                             )}
                         </div>
+
+                        <div className="text-xs text-gray-400 mt-1 mb-5 ml-1 mr-1">{messageTime}</div>
 
                         {contextMenu && contextMenu.messageId === msg._id && (
                             <div
@@ -353,7 +384,7 @@ const SupportAdminChat = () => {
                                     left: contextMenu.mouseX,
                                     backgroundColor: "white",
                                     boxShadow: "0px 0px 10px rgba(0,0,0,0.2)",
-                                    padding: "5px",
+                                    padding: "3px",
                                     zIndex: 10,
                                     borderRadius: "8px",
                                 }}
@@ -362,7 +393,7 @@ const SupportAdminChat = () => {
                                 <div className="text-left space-y-2">
 
                                     <div className="flex items-center space-x-2 cursor-pointer" onClick={() => deleteMessage(msg._id)}>
-                                        <span>🗑️</span>
+                                        <span><MdDelete /></span>
                                         <button className="hover:font-bold text-red-600">Delete</button>
                                     </div>
 
@@ -378,6 +409,13 @@ const SupportAdminChat = () => {
                                             </div>
                                         </>
                                     )}
+                                    <div className="flex items-center space-x-2 cursor-pointer"
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(msg.message);
+                                        }} >
+                                        <span> <FaRegCopy /></span>
+                                        <button className="hover:font-bold text-red-600">Copy</button>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -389,7 +427,7 @@ const SupportAdminChat = () => {
 
     return (
         <>
-            <div className="container mx-auto mt-5">
+            <div className="container mx-auto mt-5" onClick={handleClose} onScroll={handleClose}>
                 <div className="flex justify-between items-center py-4 px-6 bg-blue-600 text-white rounded-t-lg mb-3">
                     <IoIosArrowDropleftCircle onClick={handleBackToRequests} className="text-4xl text-white font-semibold cursor-pointer" > Back </IoIosArrowDropleftCircle>
                     <h2 className="text-2xl font-semibold">Support Ticket Details </h2>
@@ -465,16 +503,6 @@ const SupportAdminChat = () => {
                         {selectedTicket && (
                             <>
                                 <div className="w-3/4 p-2">
-                                    {/* Bulk delete button */}
-                                    <button onClick={toggleBulkDeleteMode}>
-                                        {isBulkDeleteMode ? "Cancel Selection" : "Select Messages"}
-                                    </button>
-                                    {isBulkDeleteMode && selectedMessages.length > 0 && (
-                                        <button onClick={deleteSelectedMessages} className="ml-2 bg-red-500 text-white px-4 py-2 rounded">
-                                            Delete Selected
-                                        </button>
-                                    )}
-                                    <div ref={messagesEndRef}></div>
                                     <div className="bg-white p-4 h-[500px] overflow-y-auto border">
                                         <h5 className="text-xl font-semibold mb-2 text-center" style={{
                                             position: "sticky",
@@ -510,37 +538,57 @@ const SupportAdminChat = () => {
                                                     </div>
                                                 </div>
                                             )}
+                                            <div className="flex items-center mt-2">
+                                                {selectionMode && selectedMessages.length > 0 ? (
+                                                    <button
+                                                        onClick={deleteSelectedMessages}
+                                                        className="bg-red-500 text-white py-2 px-4 rounded-md transition duration-300 hover:bg-red-600"
+                                                    >
+                                                        Delete Selected Messages
+                                                    </button>
+                                                ) : (
+                                                    <div className="flex items-center w-full">
+                                                        <textarea
+                                                            type="text"
+                                                            placeholder="Type your message..."
+                                                            value={message}
+                                                            onChange={(e) => setMessage(e.target.value)}
+                                                            className="flex-grow p-2 border rounded-md focus:outline-none"
+                                                            disabled={isChatDisabled}
+                                                            onKeyPress={handleKeyPress}
+                                                            rows={1}
+                                                        />
 
-                                            <div className="flex items-center">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Enter your message..."
-                                                    value={message}
-                                                    onChange={(e) => setMessage(e.target.value)}
-                                                    className="flex-grow p-2 border rounded-md focus:outline-none"
-                                                    disabled={isChatDisabled}
-                                                />
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            id="image-upload"
+                                                            style={{ display: 'none' }}
+                                                            onChange={handleImageChange}
+                                                        />
 
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    id="image-upload"
-                                                    style={{ display: 'none' }}
-                                                    onChange={handleImageChange}
-                                                />
+                                                        <label htmlFor="image-upload" className="ml-3 cursor-pointer text-gray-500">
+                                                            <FaImage className="text-2xl" />
+                                                        </label>
 
-                                                <label htmlFor="image-upload" className="ml-3 cursor-pointer text-gray-500">
-                                                    <FaImage className="text-2xl" />
-                                                </label>
-
-                                                <button
-                                                    onClick={sendMessage}
-                                                    className={`bg-blue-500 text-white px-4 py-2 ml-2 rounded ${(!message && !selectedImage) ? 'opacity-50 cursor-not-allowed' : ''
-                                                        }`}
-                                                    disabled={!message && !selectedImage}
-                                                >
-                                                    Send
-                                                </button>
+                                                        <button
+                                                            onClick={sendMessage}
+                                                            className={`bg-blue-500 text-white px-4 py-2 ml-2 rounded ${(!message && !selectedImage) ? 'opacity-50 cursor-not-allowed' : ''
+                                                                }`}
+                                                            disabled={!message && !selectedImage}
+                                                        >
+                                                            Send
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {selectionMode && (
+                                                    <button
+                                                        onClick={cancelSelection}
+                                                        className="text-gray-500 ml-4 hover:underline"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     )}
