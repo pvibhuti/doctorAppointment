@@ -6,6 +6,7 @@ const applyTicket = require("./applyTicket.js");
 const { fileFilterConfig, storageConfig } = require("../../Utils/CommonUtils.js");
 const multer = require("multer");
 const supportChatMessage = require("./supportChatMessage.js");
+const { default: mongoose } = require('mongoose');
 
 const createSupportTicket = async (req, res, next) => {
     try {
@@ -357,58 +358,69 @@ const getMessagesByTicket = async (req, res, next) => {
         if (!user) {
             return sendError(req, res, { message: "Token is invalid." }, 403);
         }
+        const _id = user.doctorId || user.patientId;
 
-        const { id, userType } = req.query || req.params;
+        const { id } = req.query || req.params;
 
-        if (!id || !userType) {
-            return sendError(req, res, { message: "Ticket ID and user type are required." });
+        if (!id) {
+            return sendError(req, res, { message: "Ticket ID is required." });
         }
 
         const messages = await supportChatMessage.find({
             applyTicketId: id,
-            deletedBy: { $ne: userType },
+            deletedBy: { $ne: _id },
             status: 0
         });
 
         return sendSuccess(req, res, { message: "All messages here.", messages });
     } catch (error) {
-        console.error('Error :', error);
+        console.error('Error:', error);
         return sendError(req, res, {
-            message: "An Server Error.",
+            message: "Server Error.",
             error: error.message,
         }, 500);
     }
-}
+};
 
-const deleteMessage = async (req, res, next) => {
+const deleteMessages = async (req, res, next) => {
     try {
-        const { id, userType } = req.query || req.params;
-
-        if (!id || !userType) {
-            return sendError(req, res, { message: "Message ID and user type are required." });
+        const user = req.user;
+        if (!user) {
+            return sendError(req, res, { message: "Token is invalid." }, 403);
         }
 
-        const messageData = await supportChatMessage.findOne({ _id: id });
-        if (!messageData) {
-            return sendError(req, res, { message: "Message data not found." }, 404);
+        const { id } = req.body || req.query || req.params;
+
+        if (!id) {
+            return sendError(req, res, { message: "Message ID(s) required." });
         }
 
-        const updatedMessage = await supportChatMessage.findByIdAndUpdate(
-            id,
-            { $push: { deletedBy: userType } },
-            { new: true }
+        const _id = user.doctorId || user.patientId;
+        if (!_id) {
+            return sendError(req, res, { message: "Invalid user." }, 403);
+        }
+
+        const messageIds = Array.isArray(id) ? id : [id];
+
+        const messages = await supportChatMessage.find({ _id: { $in: messageIds } });
+        if (messages.length === 0) {
+            return sendError(req, res, { message: "No messages found for the provided id(s)." }, 404);
+        }
+
+        await supportChatMessage.updateMany(
+            { _id: { $in: messageIds } },
+            { $addToSet: { deletedBy: _id } }
         );
 
-        return sendSuccess(req, res, { message: "Message Delete Successfully." });
-
+        return sendSuccess(req, res, { message: "Message(s) deleted successfully." });
     } catch (error) {
-        console.error('Error :', error);
+        console.error('Error:', error);
         return sendError(req, res, {
-            message: "An Server Error.",
+            message: "A server error occurred.",
             error: error.message,
         }, 500);
     }
-}
+};
 
 const deleteforEveryOne = async (req, res, next) => {
     try {
@@ -478,7 +490,7 @@ module.exports = {
     getSelectedApplyTicket,
     getPatientTicket,
     getMessagesByTicket,
-    deleteMessage,
     deleteforEveryOne,
-    editMessage
+    editMessage,
+    deleteMessages
 }

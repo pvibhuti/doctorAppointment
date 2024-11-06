@@ -31,7 +31,7 @@ const supportChatSchema = new Schema({
         type: [String]
     },
     deletedBy: {
-        type: [Number],
+        type: [String],
         default: []
     }
 }, {
